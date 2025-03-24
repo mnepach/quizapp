@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/quizapp/fragments/MenuFragment.java
 package com.example.quizapp.fragments;
 
 import android.os.Bundle;
@@ -22,42 +21,31 @@ import com.example.quizapp.utils.SharedPreferencesManager;
 public class MenuFragment extends Fragment {
 
     private TextView tvWelcome;
-    private TextView tvPoints;
-    private Button btnEasyQuiz;
-    private Button btnMediumQuiz;
-    private Button btnHardQuiz;
-    private Button btnHistory;
+    private Button btnStartQuiz;
+    private Button btnViewHistory;
     private Button btnSettings;
-    private Button btnLogout;
-    private QuizDatabaseHelper dbHelper;
+    private Button btnLogin;
+    private TextView tvPoints;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Надуваем layout фрагмента
         View view = inflater.inflate(R.layout.fragment_menu, container, false);
 
+        // Инициализация элементов UI
         tvWelcome = view.findViewById(R.id.tv_welcome);
-        tvPoints = view.findViewById(R.id.tv_points);
-        btnEasyQuiz = view.findViewById(R.id.btn_easy_quiz);
-        btnMediumQuiz = view.findViewById(R.id.btn_medium_quiz);
-        btnHardQuiz = view.findViewById(R.id.btn_hard_quiz);
-        btnHistory = view.findViewById(R.id.btn_history);
+        btnStartQuiz = view.findViewById(R.id.btn_start_quiz);
+        btnViewHistory = view.findViewById(R.id.btn_view_history);
         btnSettings = view.findViewById(R.id.btn_settings);
-        btnLogout = view.findViewById(R.id.btn_logout);
-        dbHelper = new QuizDatabaseHelper(getContext());
+        btnLogin = view.findViewById(R.id.btn_login);
+        tvPoints = view.findViewById(R.id.tv_points);
 
-        loadUserData();
+        // Проверяем, авторизован ли пользователь
+        updateUI();
 
-        btnEasyQuiz.setOnClickListener(v -> startQuiz(1));
-        btnMediumQuiz.setOnClickListener(v -> startQuiz(2));
-        btnHardQuiz.setOnClickListener(v -> startQuiz(3));
-        btnHistory.setOnClickListener(v -> ((MainActivity) requireActivity()).loadFragment(new HistoryFragment()));
-        btnSettings.setOnClickListener(v -> ((MainActivity) requireActivity()).loadFragment(new SettingsFragment()));
-        btnLogout.setOnClickListener(v -> logout());
-
-        if (SharedPreferencesManager.getInstance(requireContext()).isAnimationEnabled()) {
-            AnimationUtils.fadeIn(view, 500);
-        }
+        // Настраиваем обработчики нажатий
+        setupClickListeners();
 
         return view;
     }
@@ -65,31 +53,62 @@ public class MenuFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        loadUserData();
+        // Обновляем UI при возвращении на фрагмент
+        updateUI();
     }
 
-    private void loadUserData() {
-        long userId = SharedPreferencesManager.getInstance(requireContext()).getCurrentUserId();
-        User user = dbHelper.getUserById(userId);
-
-        if (user != null) {
-            tvWelcome.setText("Добро пожаловать, " + user.getUsername() + "!");
-            tvPoints.setText("Ваши очки: " + user.getTotalPoints());
+    private void updateUI() {
+        // Проверяем, авторизован ли пользователь
+        long userId = SharedPreferencesManager.getLoggedInUserId();
+        if (userId != -1) {
+            // Пользователь авторизован
+            User user = QuizDatabaseHelper.getInstance(getContext()).getUser(userId);
+            if (user != null) {
+                tvWelcome.setText(getString(R.string.welcome_user, user.getUsername()));
+                tvPoints.setText(getString(R.string.total_points, user.getTotalPoints()));
+                tvPoints.setVisibility(View.VISIBLE);
+                btnLogin.setText(R.string.logout);
+                btnViewHistory.setEnabled(true);
+            }
+        } else {
+            // Пользователь не авторизован
+            tvWelcome.setText(R.string.welcome_guest);
+            tvPoints.setVisibility(View.GONE);
+            btnLogin.setText(R.string.login_register);
+            btnViewHistory.setEnabled(false);
         }
     }
 
-    private void startQuiz(int difficulty) {
-        Bundle args = new Bundle();
-        args.putInt("difficulty", difficulty);
+    private void setupClickListeners() {
+        // Кнопка "Начать викторину"
+        btnStartQuiz.setOnClickListener(v -> {
+            AnimationUtils.buttonClick(v); // Анимация нажатия
+            ((MainActivity) requireActivity()).loadFragment(new QuizSelectionFragment(), true);
+        });
 
-        QuestionFragment questionFragment = new QuestionFragment();
-        questionFragment.setArguments(args);
+        // Кнопка "История"
+        btnViewHistory.setOnClickListener(v -> {
+            AnimationUtils.buttonClick(v);
+            ((MainActivity) requireActivity()).loadFragment(new HistoryFragment(), true);
+        });
 
-        ((MainActivity) requireActivity()).loadFragment(questionFragment);
-    }
+        // Кнопка "Настройки"
+        btnSettings.setOnClickListener(v -> {
+            AnimationUtils.buttonClick(v);
+            ((MainActivity) requireActivity()).loadFragment(new SettingsFragment(), true);
+        });
 
-    private void logout() {
-        SharedPreferencesManager.getInstance(requireContext()).logout();
-        ((MainActivity) requireActivity()).loadFragment(new LoginFragment(), false);
+        // Кнопка "Войти/Выйти"
+        btnLogin.setOnClickListener(v -> {
+            AnimationUtils.buttonClick(v);
+            if (SharedPreferencesManager.getLoggedInUserId() != -1) {
+                // Пользователь авторизован - выполняем выход
+                SharedPreferencesManager.logout();
+                updateUI();
+            } else {
+                // Пользователь не авторизован - переходим на экран входа
+                ((MainActivity) requireActivity()).loadFragment(new RegistrationFragment(), true);
+            }
+        });
     }
 }
