@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/quizapp/fragments/MenuFragment.java
 package com.example.quizapp.fragments;
 
 import android.os.Bundle;
@@ -10,93 +11,85 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quizapp.MainActivity;
 import com.example.quizapp.R;
-import com.example.quizapp.adapters.DifficultyAdapter;
-import com.example.quizapp.models.QuizAttempt;
+import com.example.quizapp.database.QuizDatabaseHelper;
 import com.example.quizapp.models.User;
-import com.example.quizapp.util.DatabaseAsyncTask;
-
-import java.util.List;
+import com.example.quizapp.utils.AnimationUtils;
+import com.example.quizapp.utils.SharedPreferencesManager;
 
 public class MenuFragment extends Fragment {
 
-    private Button startQuizButton;
-    private Button historyButton;
-    private Button logoutButton;
-    private TextView welcomeTextView;
-    private RecyclerView difficultyRecyclerView;
-    private DifficultyAdapter difficultyAdapter;
-    private MySQLHelper dbHelper = new MySQLHelper();
-    private int selectedDifficulty = 1; // По умолчанию легкий уровень
+    private TextView tvWelcome;
+    private TextView tvPoints;
+    private Button btnEasyQuiz;
+    private Button btnMediumQuiz;
+    private Button btnHardQuiz;
+    private Button btnHistory;
+    private Button btnSettings;
+    private Button btnLogout;
+    private QuizDatabaseHelper dbHelper;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_menu, container, false);
 
-        startQuizButton = view.findViewById(R.id.start_quiz_button);
-        historyButton = view.findViewById(R.id.history_button);
-        logoutButton = view.findViewById(R.id.logout_button);
-        welcomeTextView = view.findViewById(R.id.welcome_text_view);
-        difficultyRecyclerView = view.findViewById(R.id.difficulty_recycler_view);
+        tvWelcome = view.findViewById(R.id.tv_welcome);
+        tvPoints = view.findViewById(R.id.tv_points);
+        btnEasyQuiz = view.findViewById(R.id.btn_easy_quiz);
+        btnMediumQuiz = view.findViewById(R.id.btn_medium_quiz);
+        btnHardQuiz = view.findViewById(R.id.btn_hard_quiz);
+        btnHistory = view.findViewById(R.id.btn_history);
+        btnSettings = view.findViewById(R.id.btn_settings);
+        btnLogout = view.findViewById(R.id.btn_logout);
+        dbHelper = new QuizDatabaseHelper(getContext());
 
-        User currentUser = ((MainActivity) requireActivity()).getCurrentUser();
-        if (currentUser != null) {
-            welcomeTextView.setText("Привет, " + currentUser.getUsername() + "!");
+        loadUserData();
+
+        btnEasyQuiz.setOnClickListener(v -> startQuiz(1));
+        btnMediumQuiz.setOnClickListener(v -> startQuiz(2));
+        btnHardQuiz.setOnClickListener(v -> startQuiz(3));
+        btnHistory.setOnClickListener(v -> ((MainActivity) requireActivity()).loadFragment(new HistoryFragment()));
+        btnSettings.setOnClickListener(v -> ((MainActivity) requireActivity()).loadFragment(new SettingsFragment()));
+        btnLogout.setOnClickListener(v -> logout());
+
+        if (SharedPreferencesManager.getInstance(requireContext()).isAnimationEnabled()) {
+            AnimationUtils.fadeIn(view, 500);
         }
-
-        // Настройка RecyclerView для выбора сложности
-        difficultyRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        difficultyAdapter = new DifficultyAdapter();
-        difficultyAdapter.setOnDifficultySelectedListener(difficulty -> {
-            selectedDifficulty = difficulty;
-        });
-        difficultyRecyclerView.setAdapter(difficultyAdapter);
-
-        startQuizButton.setOnClickListener(v -> startQuiz());
-        historyButton.setOnClickListener(v -> showHistory());
-        logoutButton.setOnClickListener(v -> logout());
 
         return view;
     }
 
-    private void startQuiz() {
-        Bundle bundle = new Bundle();
-        bundle.putInt("difficulty", selectedDifficulty);
-
-        QuizFragment quizFragment = new QuizFragment();
-        quizFragment.setArguments(bundle);
-
-        ((MainActivity) requireActivity()).replaceFragment(quizFragment, true);
+    @Override
+    public void onResume() {
+        super.onResume();
+        loadUserData();
     }
 
-    private void showHistory() {
-        User currentUser = ((MainActivity) requireActivity()).getCurrentUser();
-        if (currentUser != null) {
-            new DatabaseAsyncTask<List<QuizAttempt>>(
-                    () -> dbHelper.getUserAttempts(currentUser.getId()),
-                    this::onHistoryLoaded,
-                    e -> { /* Обработка ошибки */ }
-            ).execute();
+    private void loadUserData() {
+        long userId = SharedPreferencesManager.getInstance(requireContext()).getCurrentUserId();
+        User user = dbHelper.getUserById(userId);
+
+        if (user != null) {
+            tvWelcome.setText("Добро пожаловать, " + user.getUsername() + "!");
+            tvPoints.setText("Ваши очки: " + user.getTotalPoints());
         }
     }
 
-    private void onHistoryLoaded(List<QuizAttempt> attempts) {
-        Bundle bundle = new Bundle();
-        bundle.putInt("userId", ((MainActivity) requireActivity()).getCurrentUser().getId());
+    private void startQuiz(int difficulty) {
+        Bundle args = new Bundle();
+        args.putInt("difficulty", difficulty);
 
-        HistoryFragment historyFragment = new HistoryFragment();
-        historyFragment.setArguments(bundle);
+        QuestionFragment questionFragment = new QuestionFragment();
+        questionFragment.setArguments(args);
 
-        ((MainActivity) requireActivity()).replaceFragment(historyFragment, true);
+        ((MainActivity) requireActivity()).loadFragment(questionFragment);
     }
 
     private void logout() {
-        ((MainActivity) requireActivity()).setCurrentUser(null);
-        ((MainActivity) requireActivity()).replaceFragment(new LoginFragment(), false);
+        SharedPreferencesManager.getInstance(requireContext()).logout();
+        ((MainActivity) requireActivity()).loadFragment(new LoginFragment(), false);
     }
 }
