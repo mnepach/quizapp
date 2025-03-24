@@ -1,141 +1,102 @@
 package com.example.quizapp.fragments;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.quizapp.MainActivity;
 import com.example.quizapp.R;
+import com.example.quizapp.adapters.DifficultyAdapter;
+import com.example.quizapp.models.QuizAttempt;
 import com.example.quizapp.models.User;
+import com.example.quizapp.util.DatabaseAsyncTask;
+
+import java.util.List;
 
 public class MenuFragment extends Fragment {
-    private static final String ARG_USER = "user";
 
-    private User currentUser;
+    private Button startQuizButton;
+    private Button historyButton;
+    private Button logoutButton;
+    private TextView welcomeTextView;
+    private RecyclerView difficultyRecyclerView;
+    private DifficultyAdapter difficultyAdapter;
+    private MySQLHelper dbHelper = new MySQLHelper();
     private int selectedDifficulty = 1; // По умолчанию легкий уровень
-
-    private OnMenuInteractionListener listener;
-
-    public interface OnMenuInteractionListener {
-        void onStartQuizClicked(int difficultyLevel);
-        void onLoginClicked();
-        void onRegisterClicked();
-        void onHistoryClicked();
-        void onExitClicked();
-    }
-
-    public static MenuFragment newInstance(User user) {
-        MenuFragment fragment = new MenuFragment();
-        Bundle args = new Bundle();
-        args.putSerializable(ARG_USER, user);
-        fragment.setArguments(args);
-        return fragment;
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            currentUser = (User) getArguments().getSerializable(ARG_USER);
-        }
-    }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_menu, container, false);
 
-        TextView usernameText = view.findViewById(R.id.username_text);
+        startQuizButton = view.findViewById(R.id.start_quiz_button);
+        historyButton = view.findViewById(R.id.history_button);
+        logoutButton = view.findViewById(R.id.logout_button);
+        welcomeTextView = view.findViewById(R.id.welcome_text_view);
+        difficultyRecyclerView = view.findViewById(R.id.difficulty_recycler_view);
+
+        User currentUser = ((MainActivity) requireActivity()).getCurrentUser();
         if (currentUser != null) {
-            usernameText.setText("Привет, " + currentUser.getUsername() + "!");
-            usernameText.setVisibility(View.VISIBLE);
+            welcomeTextView.setText("Привет, " + currentUser.getUsername() + "!");
         }
 
-        Button startQuizButton = view.findViewById(R.id.btn_start_quiz);
-        Button loginButton = view.findViewById(R.id.btn_login);
-        Button registerButton = view.findViewById(R.id.btn_register);
-        Button historyButton = view.findViewById(R.id.btn_history);
-        Button exitButton = view.findViewById(R.id.btn_exit);
-
-        RadioGroup difficultyGroup = view.findViewById(R.id.difficulty_group);
-        RadioButton easyRadio = view.findViewById(R.id.rb_easy);
-        RadioButton mediumRadio = view.findViewById(R.id.rb_medium);
-        RadioButton hardRadio = view.findViewById(R.id.rb_hard);
-
-        // Настройка видимости кнопок в зависимости от статуса пользователя
-        if (currentUser != null) {
-            loginButton.setVisibility(View.GONE);
-            registerButton.setVisibility(View.GONE);
-            historyButton.setVisibility(View.VISIBLE);
-        } else {
-            historyButton.setVisibility(View.GONE);
-        }
-
-        difficultyGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rb_easy) {
-                selectedDifficulty = 1;
-            } else if (checkedId == R.id.rb_medium) {
-                selectedDifficulty = 2;
-            } else if (checkedId == R.id.rb_hard) {
-                selectedDifficulty = 3;
-            }
+        // Настройка RecyclerView для выбора сложности
+        difficultyRecyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
+        difficultyAdapter = new DifficultyAdapter();
+        difficultyAdapter.setOnDifficultySelectedListener(difficulty -> {
+            selectedDifficulty = difficulty;
         });
+        difficultyRecyclerView.setAdapter(difficultyAdapter);
 
-        startQuizButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onStartQuizClicked(selectedDifficulty);
-            }
-        });
-
-        loginButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onLoginClicked();
-            }
-        });
-
-        registerButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onRegisterClicked();
-            }
-        });
-
-        historyButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onHistoryClicked();
-            }
-        });
-
-        exitButton.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onExitClicked();
-            }
-        });
+        startQuizButton.setOnClickListener(v -> startQuiz());
+        historyButton.setOnClickListener(v -> showHistory());
+        logoutButton.setOnClickListener(v -> logout());
 
         return view;
     }
 
-    @Override
-    public void onAttach(@NonNull Context context) {
-        super.onAttach(context);
-        if (context instanceof OnMenuInteractionListener) {
-            listener = (OnMenuInteractionListener) context;
-        } else {
-            throw new RuntimeException(context + " must implement OnMenuInteractionListener");
+    private void startQuiz() {
+        Bundle bundle = new Bundle();
+        bundle.putInt("difficulty", selectedDifficulty);
+
+        QuizFragment quizFragment = new QuizFragment();
+        quizFragment.setArguments(bundle);
+
+        ((MainActivity) requireActivity()).replaceFragment(quizFragment, true);
+    }
+
+    private void showHistory() {
+        User currentUser = ((MainActivity) requireActivity()).getCurrentUser();
+        if (currentUser != null) {
+            new DatabaseAsyncTask<List<QuizAttempt>>(
+                    () -> dbHelper.getUserAttempts(currentUser.getId()),
+                    this::onHistoryLoaded,
+                    e -> { /* Обработка ошибки */ }
+            ).execute();
         }
     }
 
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        listener = null;
+    private void onHistoryLoaded(List<QuizAttempt> attempts) {
+        Bundle bundle = new Bundle();
+        bundle.putInt("userId", ((MainActivity) requireActivity()).getCurrentUser().getId());
+
+        HistoryFragment historyFragment = new HistoryFragment();
+        historyFragment.setArguments(bundle);
+
+        ((MainActivity) requireActivity()).replaceFragment(historyFragment, true);
+    }
+
+    private void logout() {
+        ((MainActivity) requireActivity()).setCurrentUser(null);
+        ((MainActivity) requireActivity()).replaceFragment(new LoginFragment(), false);
     }
 }

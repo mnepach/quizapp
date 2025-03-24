@@ -3,44 +3,131 @@ package com.example.quizapp.models;
 import java.util.Date;
 
 public class QuizAttempt {
-    private int id;
-    private int userId;
+    private long id;
+    private long userId;
+    private long quizId;
     private int score;
     private int totalQuestions;
-    private int difficultyLevel;
+    private int correctAnswers;
+    private int hintsUsed;
     private Date attemptDate;
-    private long timeTakenInSeconds;
+    private String quizTitle;
+    private int difficulty;
 
-    public QuizAttempt(int id, int userId, int score, int totalQuestions,
-                       int difficultyLevel, Date attemptDate, long timeTakenInSeconds) {
-        this.id = id;
-        this.userId = userId;
-        this.score = score;
-        this.totalQuestions = totalQuestions;
-        this.difficultyLevel = difficultyLevel;
-        this.attemptDate = attemptDate;
-        this.timeTakenInSeconds = timeTakenInSeconds;
+    public QuizAttempt() {
+        attemptDate = new Date();
     }
 
-    // Геттеры и сеттеры
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public QuizAttempt(long userId, long quizId, String quizTitle, int difficulty) {
+        this.userId = userId;
+        this.quizId = quizId;
+        this.quizTitle = quizTitle;
+        this.difficulty = difficulty;
+        this.score = 0;
+        this.correctAnswers = 0;
+        this.hintsUsed = 0;
+        this.attemptDate = new Date();
+    }
 
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
+    public long getId() {
+        return id;
+    }
 
-    public int getScore() { return score; }
-    public void setScore(int score) { this.score = score; }
+    public void setId(long id) {
+        this.id = id;
+    }
 
-    public int getTotalQuestions() { return totalQuestions; }
-    public void setTotalQuestions(int totalQuestions) { this.totalQuestions = totalQuestions; }
+    public long getUserId() {
+        return userId;
+    }
 
-    public int getDifficultyLevel() { return difficultyLevel; }
-    public void setDifficultyLevel(int difficultyLevel) { this.difficultyLevel = difficultyLevel; }
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
 
-    public Date getAttemptDate() { return attemptDate; }
-    public void setAttemptDate(Date attemptDate) { this.attemptDate = attemptDate; }
+    public long getQuizId() {
+        return quizId;
+    }
 
-    public long getTimeTakenInSeconds() { return timeTakenInSeconds; }
-    public void setTimeTakenInSeconds(long timeTakenInSeconds) { this.timeTakenInSeconds = timeTakenInSeconds; }
+    public void setQuizId(long quizId) {
+        this.quizId = quizId;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public void addToScore(int points) {
+        this.score += points;
+    }
+
+    public int getTotalQuestions() {
+        return totalQuestions;
+    }
+
+    public void setTotalQuestions(int totalQuestions) {
+        this.totalQuestions = totalQuestions;
+    }
+
+    public int getCorrectAnswers() {
+        return correctAnswers;
+    }
+
+    public void setCorrectAnswers(int correctAnswers) {
+        this.correctAnswers = correctAnswers;
+    }
+
+    public void incrementCorrectAnswers() {
+        this.correctAnswers++;
+    }
+
+    public int getHintsUsed() {
+        return hintsUsed;
+    }
+
+    public void setHintsUsed(int hintsUsed) {
+        this.hintsUsed = hintsUsed;
+    }
+
+    public void incrementHintsUsed() {
+        this.hintsUsed++;
+    }
+
+    public Date getAttemptDate() {
+        return attemptDate;
+    }
+
+    public void setAttemptDate(Date attemptDate) {
+        this.attemptDate = attemptDate;
+    }
+
+    public String getQuizTitle() {
+        return quizTitle;
+    }
+
+    public void setQuizTitle(String quizTitle) {
+        this.quizTitle = quizTitle;
+    }
+
+    public int getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(int difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public String getFormattedDate() {
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm");
+        return sdf.format(attemptDate);
+    }
+
+    public String getPerformancePercentage() {
+        if (totalQuestions == 0) return "0%";
+        return (correctAnswers * 100 / totalQuestions) + "%";
+    }
 }
