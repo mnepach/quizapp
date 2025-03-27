@@ -1,0 +1,49 @@
+app/
+  ├── src/
+      ├── main/
+          ├── java/com/example/quizapp/
+          │   ├── MainActivity.java
+          │   ├── database/
+          │   │   ├── QuizDatabaseHelper.java
+          │   │   └── QuizContract.java
+          │   ├── models/
+          │   │   ├── User.java
+          │   │   ├── Question.java
+          │   │   ├── Quiz.java
+          │   │   ├── QuizAttempt.java
+          │   │   └── Hint.java
+          │   ├── fragments/
+          │   │   ├── MenuFragment.java
+          │   │   ├── QuestionFragment.java
+          │   │   ├── ResultFragment.java
+          │   │   ├── RegistrationFragment.java
+          │   │   ├── HistoryFragment.java
+          │   │   └── SettingsFragment.java
+          │   ├── adapters/
+          │   │   ├── QuizHistoryAdapter.java
+          │   │   └── AnswerAdapter.java
+          │   ├── utils/
+          │   │   ├── AnimationUtils.java
+          │   │   ├── SoundUtils.java
+          │   │   └── SharedPreferencesManager.java
+          ├── res/
+              ├── layout/
+              │   ├── activity_main.xml
+              │   ├── fragment_menu.xml
+              │   ├── fragment_question.xml
+              │   ├── fragment_result.xml
+              │   ├── fragment_registration.xml
+              │   ├── fragment_history.xml
+              │   ├── fragment_settings.xml
+              │   ├── item_answer.xml
+              │   └── item_history.xml
+              ├── drawable/
+              ├── values/
+              │   ├── strings.xml
+              │   ├── colors.xml
+              │   ├── styles.xml
+              │   └── dimens.xml
+              ├── raw/
+                  ├── correct_answer.mp3
+                  ├── wrong_answer.mp3
+                  └── timer_tick.mp3
