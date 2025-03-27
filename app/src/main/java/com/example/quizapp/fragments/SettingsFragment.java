@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +21,7 @@ import com.example.quizapp.utils.SharedPreferencesManager;
 
 public class SettingsFragment extends Fragment {
 
+    private SharedPreferencesManager preferencesManager;
     private SeekBar seekBarVolume;
     private TextView tvVolumeValue;
     private CheckBox cbVibration;
@@ -34,6 +36,9 @@ public class SettingsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
+
+        // Инициализация менеджера SharedPreferences
+        preferencesManager = SharedPreferencesManager.getInstance(requireContext());
 
         // Инициализация UI элементов
         seekBarVolume = view.findViewById(R.id.seek_bar_volume);
@@ -56,10 +61,10 @@ public class SettingsFragment extends Fragment {
 
     private void loadSettings() {
         // Загружаем настройки из SharedPreferences
-        int volume = SharedPreferencesManager.getVolume();
-        boolean vibration = SharedPreferencesManager.isVibrationEnabled();
-        boolean soundEffects = SharedPreferencesManager.isSoundEffectsEnabled();
-        boolean animations = SharedPreferencesManager.isAnimationsEnabled();
+        int volume = preferencesManager.getVolume();
+        boolean vibration = preferencesManager.isVibrationEnabled();
+        boolean soundEffects = preferencesManager.isSoundEffectsEnabled();
+        boolean animations = preferencesManager.isAnimationsEnabled();
 
         // Устанавливаем значения в UI
         seekBarVolume.setProgress(volume);
@@ -78,12 +83,10 @@ public class SettingsFragment extends Fragment {
             }
 
             @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
+            public void onStartTrackingTouch(SeekBar seekBar) {}
 
             @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
+            public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
         // Обработчик нажатия на кнопку "Применить"
@@ -112,16 +115,13 @@ public class SettingsFragment extends Fragment {
         boolean soundEffects = cbSoundEffects.isChecked();
         boolean animations = cbAnimations.isChecked();
 
-        SharedPreferencesManager.setVolume(volume);
-        SharedPreferencesManager.setVibrationEnabled(vibration);
-        SharedPreferencesManager.setSoundEffectsEnabled(soundEffects);
-        SharedPreferencesManager.setAnimationsEnabled(animations);
+        preferencesManager.setVolume(volume);
+        preferencesManager.setVibrationEnabled(vibration);
+        preferencesManager.setSoundEffectsEnabled(soundEffects);
+        preferencesManager.setAnimationsEnabled(animations);
 
         // Показываем сообщение об успешном сохранении
-        if (getContext() != null) {
-            android.widget.Toast.makeText(getContext(),
-                    R.string.settings_saved, android.widget.Toast.LENGTH_SHORT).show();
-        }
+        Toast.makeText(requireContext(), R.string.settings_saved, Toast.LENGTH_SHORT).show();
     }
 
     private void resetSettings() {

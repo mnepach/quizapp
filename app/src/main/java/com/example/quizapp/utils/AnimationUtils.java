@@ -11,8 +11,23 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
 import android.view.animation.ScaleAnimation;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 public class AnimationUtils {
+
+    public static void buttonClick(View view) {
+        if (view == null) return;
+
+        // Создаем анимацию нажатия кнопки (легкое сжатие)
+        ObjectAnimator scaleX = ObjectAnimator.ofFloat(view, "scaleX", 1f, 0.9f, 1f);
+        ObjectAnimator scaleY = ObjectAnimator.ofFloat(view, "scaleY", 1f, 0.9f, 1f);
+
+        scaleX.setDuration(100);
+        scaleY.setDuration(100);
+
+        scaleX.start();
+        scaleY.start();
+    }
 
     public static void animateCorrectAnswer(View view) {
         if (view == null) return;
@@ -61,24 +76,24 @@ public class AnimationUtils {
         animator.start();
     }
 
-    public static void fadeIn(View view, int duration) {
+    public static void fadeIn(View view) {
         if (view == null) return;
 
         view.setAlpha(0f);
         view.setVisibility(View.VISIBLE);
         view.animate()
                 .alpha(1f)
-                .setDuration(duration)
+                .setDuration(300)
                 .setListener(null)
                 .start();
     }
 
-    public static void fadeOut(View view, int duration) {
+    public static void fadeOut(View view) {
         if (view == null) return;
 
         view.animate()
                 .alpha(0f)
-                .setDuration(duration)
+                .setDuration(300)
                 .setListener(new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationEnd(Animator animation) {

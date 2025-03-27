@@ -50,4 +50,22 @@
     <string name="quiz_date">Date: %s</string>
     <string name="quiz_score">Score: %d points (%d%%)</string>
     <string name="quiz_time">Time: %d min %d sec</string>
+
+    <!-- Strings for History Fragment -->
+    <string name="history_title">Quiz History</string>
+    <string name="no_history">No quiz history available</string>
+
+    <!-- Menu Fragment -->
+    <string name="welcome_guest">Welcome, Guest</string>
+    <string name="total_points">Total Points: 0</string>
+    <string name="start_quiz">Start Quiz</string>
+    <string name="login_register">Login/Register</string>
+
+    <!-- Quiz Selection Fragment -->
+    <string name="select_quiz">Select a Quiz</string>
+    <string name="quiz_details">Quiz Details</string>
+    <string name="difficulty_label">Difficulty: %s</string>
+    <string name="time_per_question">Time per Question: %d seconds</string>
+    <string name="question_count">Total Questions: %d</string>
+    <string name="start_selected_quiz">Start Selected Quiz</string>
 </resources>
