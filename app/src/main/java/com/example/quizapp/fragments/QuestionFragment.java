@@ -1,5 +1,6 @@
 package com.example.quizapp.fragments;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -12,8 +13,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
@@ -65,31 +64,10 @@ public class QuestionFragment extends Fragment {
     private boolean hint50Used = false;
     private boolean shareFriendUsed = false;
 
-    private ActivityResultLauncher<Intent> shareFriendLauncher;
-
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         quizStartTime = System.currentTimeMillis();
-
-        shareFriendLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == android.app.Activity.RESULT_CANCELED) {
-                        // Если шторка закрыта без выбора приложения
-                        btnShareFriend.setVisibility(View.VISIBLE); // Восстанавливаем кнопку
-                        shareFriendUsed = false; // Сбрасываем флаг
-                        Toast.makeText(getContext(), "Отправка отменена", Toast.LENGTH_SHORT).show();
-                    } else {
-                        // Если было выбрано приложение, оставляем кнопку скрытой
-                        shareFriendUsed = true;
-                        if (currentAttempt != null) {
-                            currentAttempt.incrementHintsUsed();
-                        }
-                        Toast.makeText(getContext(), "Вопрос отправлен другу!", Toast.LENGTH_SHORT).show();
-                    }
-                }
-        );
     }
 
     @Nullable
@@ -119,12 +97,12 @@ public class QuestionFragment extends Fragment {
 
         btnUseHint.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
-            useFiftyFifty();
+            showHintConfirmationDialog("50/50");
         });
 
         btnShareFriend.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
-            shareWithFriend();
+            showHintConfirmationDialog("share");
         });
 
         return view;
@@ -136,6 +114,27 @@ public class QuestionFragment extends Fragment {
         if (timer != null) {
             timer.cancel();
         }
+    }
+
+    private void showHintConfirmationDialog(String hintType) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Подтверждение");
+        builder.setMessage("Вы точно хотите использовать подсказку?");
+
+        builder.setPositiveButton("Да", (dialog, which) -> {
+            if ("50/50".equals(hintType)) {
+                useFiftyFifty();
+            } else if ("share".equals(hintType)) {
+                shareWithFriend();
+            }
+        });
+
+        builder.setNegativeButton("Нет", (dialog, which) -> {
+            dialog.dismiss();
+        });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
     private void loadQuiz(long quizId) {
@@ -293,7 +292,6 @@ public class QuestionFragment extends Fragment {
 
     private void useFiftyFifty() {
         if (hint50Used) {
-            Toast.makeText(getContext(), "Подсказка 50/50 уже использована в этой викторине", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -322,8 +320,13 @@ public class QuestionFragment extends Fragment {
 
     private void shareWithFriend() {
         if (shareFriendUsed) {
-            Toast.makeText(getContext(), "Подсказка 'Отправить другу' уже использована в этой викторине", Toast.LENGTH_SHORT).show();
             return;
+        }
+
+        shareFriendUsed = true;
+        btnShareFriend.setVisibility(View.GONE);
+        if (currentAttempt != null) {
+            currentAttempt.incrementHintsUsed();
         }
 
         Question currentQuestion = questions.get(currentQuestionIndex);
@@ -341,10 +344,7 @@ public class QuestionFragment extends Fragment {
         shareIntent.setType("text/plain");
         shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Вопрос из викторины");
-
-        // Скрываем кнопку перед запуском шторки, предполагая, что выбор будет сделан
-        btnShareFriend.setVisibility(View.GONE);
-        shareFriendLauncher.launch(Intent.createChooser(shareIntent, "Отправить другу через..."));
+        startActivity(Intent.createChooser(shareIntent, "Отправить другу через..."));
     }
 
     private void resetButtonStyles() {
