@@ -112,12 +112,12 @@ public class QuestionFragment extends Fragment {
             Collections.shuffle(questions);
 
             // Создаем новую попытку прохождения викторины
-            long userId = SharedPreferencesManager.getLoggedInUserId();
+            long userId = SharedPreferencesManager.getInstance(getContext()).getLoggedInUserId();
             if (userId != -1) {
                 currentAttempt = new QuizAttempt();
                 currentAttempt.setUserId(userId);
                 currentAttempt.setQuizId(quizId);
-                currentAttempt.setStartTime(new Date());
+                currentAttempt.setAttemptDate(new Date());
                 quizStartTime = System.currentTimeMillis();
             }
 
@@ -140,23 +140,16 @@ public class QuestionFragment extends Fragment {
         tvQuestionNumber.setText(getString(R.string.question_number, index + 1, questions.size()));
 
         // Устанавливаем текст вопроса
-        tvQuestion.setText(currentQuestion.getText());
+        tvQuestion.setText(currentQuestion.getQuestionText());
 
         // Получаем варианты ответов
-        List<String> options = new ArrayList<>();
-        options.add(currentQuestion.getCorrectAnswer());
-        options.add(currentQuestion.getOption1());
-        options.add(currentQuestion.getOption2());
-        options.add(currentQuestion.getOption3());
-
-        // Перемешиваем варианты ответов
-        Collections.shuffle(options);
+        String[] options = currentQuestion.getOptions();
 
         // Устанавливаем варианты ответов на кнопки
-        btnOption1.setText(options.get(0));
-        btnOption2.setText(options.get(1));
-        btnOption3.setText(options.get(2));
-        btnOption4.setText(options.get(3));
+        btnOption1.setText(options[0]);
+        btnOption2.setText(options[1]);
+        btnOption3.setText(options[2]);
+        btnOption4.setText(options[3]);
 
         // Сбрасываем стили кнопок
         resetButtonStyles();
@@ -169,7 +162,7 @@ public class QuestionFragment extends Fragment {
         btnUseHint.setVisibility(View.VISIBLE);
 
         // Запускаем таймер
-        startTimer(currentQuiz.getTimePerQuestionInSeconds());
+        startTimer(currentQuiz.getTimePerQuestion());
     }
 
     private void setupButtonClickListeners(Question question) {
@@ -189,10 +182,15 @@ public class QuestionFragment extends Fragment {
 
             // Получаем текст выбранного варианта
             Button clickedButton = (Button) v;
-            String selectedAnswer = clickedButton.getText().toString();
+            int selectedOptionIndex = -1;
+
+            if (clickedButton == btnOption1) selectedOptionIndex = 0;
+            else if (clickedButton == btnOption2) selectedOptionIndex = 1;
+            else if (clickedButton == btnOption3) selectedOptionIndex = 2;
+            else if (clickedButton == btnOption4) selectedOptionIndex = 3;
 
             // Проверяем правильность ответа
-            boolean isCorrect = selectedAnswer.equals(question.getCorrectAnswer());
+            boolean isCorrect = question.isCorrectAnswer(selectedOptionIndex);
 
             if (isCorrect) {
                 // Правильный ответ
@@ -202,9 +200,14 @@ public class QuestionFragment extends Fragment {
                 int points = calculatePoints(question.getDifficulty());
                 totalPoints += points;
 
+                if (currentAttempt != null) {
+                    currentAttempt.incrementCorrectAnswers();
+                    currentAttempt.addToScore(points);
+                }
+
                 // Анимация и звук для правильного ответа
                 clickedButton.setBackgroundResource(R.drawable.button_correct);
-                SoundUtils.playSound(getContext(), R.raw.correct_answer);
+                SoundUtils.playCorrectAnswerSound(getContext());
             } else {
                 // Неправильный ответ
                 clickedButton.setBackgroundResource(R.drawable.button_incorrect);
@@ -213,11 +216,8 @@ public class QuestionFragment extends Fragment {
                 highlightCorrectAnswer(question);
 
                 // Вибрация и звук для неправильного ответа
-                Vibrator vibrator = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-                if (vibrator != null && vibrator.hasVibrator()) {
-                    vibrator.vibrate(300);
-                }
-                SoundUtils.playSound(getContext(), R.raw.wrong_answer);
+                SoundUtils.vibrate(getContext(), 300);
+                SoundUtils.playWrongAnswerSound(getContext());
             }
 
             // Задержка перед переходом к следующему вопросу
@@ -248,15 +248,15 @@ public class QuestionFragment extends Fragment {
     }
 
     private void highlightCorrectAnswer(Question question) {
-        String correctAnswer = question.getCorrectAnswer();
+        int correctIndex = question.getCorrectOptionIndex();
 
-        if (btnOption1.getText().toString().equals(correctAnswer)) {
+        if (correctIndex == 0) {
             btnOption1.setBackgroundResource(R.drawable.button_correct);
-        } else if (btnOption2.getText().toString().equals(correctAnswer)) {
+        } else if (correctIndex == 1) {
             btnOption2.setBackgroundResource(R.drawable.button_correct);
-        } else if (btnOption3.getText().toString().equals(correctAnswer)) {
+        } else if (correctIndex == 2) {
             btnOption3.setBackgroundResource(R.drawable.button_correct);
-        } else if (btnOption4.getText().toString().equals(correctAnswer)) {
+        } else if (correctIndex == 3) {
             btnOption4.setBackgroundResource(R.drawable.button_correct);
         }
     }
@@ -273,7 +273,7 @@ public class QuestionFragment extends Fragment {
 
                 // Играем звук тиканья часов на последних 5 секундах
                 if (millisUntilFinished <= 5000 && millisUntilFinished > 4900) {
-                    SoundUtils.playSound(getContext(), R.raw.timer_tick);
+                    SoundUtils.playTimerTickSound(getContext());
                 }
             }
 
@@ -288,10 +288,7 @@ public class QuestionFragment extends Fragment {
                     highlightCorrectAnswer(questions.get(currentQuestionIndex));
 
                     // Вибрация
-                    Vibrator vibrator = (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
-                    if (vibrator != null && vibrator.hasVibrator()) {
-                        vibrator.vibrate(300);
-                    }
+                    SoundUtils.vibrate(getContext(), 300);
 
                     // Задержка перед переходом к следующему вопросу
                     new android.os.Handler().postDelayed(() -> {
@@ -311,14 +308,18 @@ public class QuestionFragment extends Fragment {
         Question currentQuestion = questions.get(currentQuestionIndex);
 
         // Получаем подсказку для текущего вопроса
-        String hint = QuizDatabaseHelper.getInstance(getContext())
-                .getHintForQuestion(currentQuestion.getId());
+        String hint = currentQuestion.getHint();
 
         if (hint != null && !hint.isEmpty()) {
             // Показываем подсказку
             tvHint.setText(hint);
             cardHint.setVisibility(View.VISIBLE);
             btnUseHint.setVisibility(View.GONE);
+
+            // Увеличиваем счетчик использованных подсказок
+            if (currentAttempt != null) {
+                currentAttempt.incrementHintsUsed();
+            }
 
             // Анимация для появления подсказки
             AnimationUtils.fadeIn(cardHint);
@@ -336,21 +337,15 @@ public class QuestionFragment extends Fragment {
     private void finishQuiz() {
         // Сохраняем результаты прохождения викторины, если пользователь авторизован
         if (currentAttempt != null) {
-            // Рассчитываем процент правильных ответов
-            float percentage = (float) correctAnswers / questions.size() * 100;
-
             // Заполняем данные о попытке
-            currentAttempt.setEndTime(new Date());
-            currentAttempt.setCorrectAnswers(correctAnswers);
             currentAttempt.setTotalQuestions(questions.size());
-            currentAttempt.setTotalPoints(totalPoints);
 
             // Сохраняем попытку в базу данных
             QuizDatabaseHelper.getInstance(getContext()).saveQuizAttempt(currentAttempt);
 
             // Обновляем общее количество очков пользователя
             QuizDatabaseHelper.getInstance(getContext())
-                    .updateUserPoints(currentAttempt.getUserId(), totalPoints);
+                    .updateUserPoints(currentAttempt.getUserId(), currentAttempt.getScore());
         }
 
         // Создаем фрагмент результатов и передаем ему данные

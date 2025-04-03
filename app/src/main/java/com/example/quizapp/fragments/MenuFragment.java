@@ -59,7 +59,8 @@ public class MenuFragment extends Fragment {
 
     private void updateUI() {
         // Проверяем, авторизован ли пользователь
-        long userId = SharedPreferencesManager.getLoggedInUserId();
+        SharedPreferencesManager prefsManager = SharedPreferencesManager.getInstance(getContext());
+        long userId = prefsManager.getCurrentUserId();
         if (userId != -1) {
             // Пользователь авторизован
             User user = QuizDatabaseHelper.getInstance(getContext()).getUser(userId);
@@ -101,9 +102,10 @@ public class MenuFragment extends Fragment {
         // Кнопка "Войти/Выйти"
         btnLogin.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
-            if (SharedPreferencesManager.getLoggedInUserId() != -1) {
+            SharedPreferencesManager prefsManager = SharedPreferencesManager.getInstance(getContext());
+            if (prefsManager.getCurrentUserId() != -1) {
                 // Пользователь авторизован - выполняем выход
-                SharedPreferencesManager.logout();
+                prefsManager.logout();
                 updateUI();
             } else {
                 // Пользователь не авторизован - переходим на экран входа

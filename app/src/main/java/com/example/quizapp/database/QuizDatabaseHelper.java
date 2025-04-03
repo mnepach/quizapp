@@ -347,6 +347,61 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         return user;
     }
 
+    // Add to QuizDatabaseHelper.java
+    public User getUserByCredentials(String username, String password) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(
+                QuizContract.UserEntry.TABLE_NAME,
+                new String[]{
+                        QuizContract.UserEntry._ID,
+                        QuizContract.UserEntry.COLUMN_USERNAME,
+                        QuizContract.UserEntry.COLUMN_PASSWORD,
+                        QuizContract.UserEntry.COLUMN_TOTAL_POINTS
+                },
+                QuizContract.UserEntry.COLUMN_USERNAME + " = ? AND " +
+                        QuizContract.UserEntry.COLUMN_PASSWORD + " = ?",
+                new String[]{username, password},
+                null, null, null
+        );
+
+        User user = null;
+        if (cursor != null && cursor.moveToFirst()) {
+            user = new User(
+                    cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.UserEntry._ID)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_USERNAME)),
+                    cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_PASSWORD)),
+                    cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_TOTAL_POINTS))
+            );
+            cursor.close();
+        }
+        db.close();
+        return user;
+    }
+
+    public boolean usernameExists(String username) {
+        SQLiteDatabase db = this.getReadableDatabase();
+
+        Cursor cursor = db.query(
+                QuizContract.UserEntry.TABLE_NAME,
+                new String[]{QuizContract.UserEntry._ID},
+                QuizContract.UserEntry.COLUMN_USERNAME + " = ?",
+                new String[]{username},
+                null, null, null
+        );
+
+        boolean exists = cursor != null && cursor.getCount() > 0;
+        if (cursor != null) {
+            cursor.close();
+        }
+        db.close();
+        return exists;
+    }
+
+    public long saveUser(User user) {
+        return addUser(user);
+    }
+
     public void updateUserPoints(long userId, int points) {
         SQLiteDatabase db = this.getWritableDatabase();
         User user = getUser(userId);

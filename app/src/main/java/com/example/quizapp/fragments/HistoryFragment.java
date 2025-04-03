@@ -51,7 +51,7 @@ public class HistoryFragment extends Fragment {
 
     private void loadHistory() {
         // Получаем ID текущего пользователя
-        long userId = SharedPreferencesManager.getLoggedInUserId();
+        long userId = SharedPreferencesManager.getInstance(getContext()).getCurrentUserId();
 
         if (userId != -1) {
             // Получаем историю прохождений из базы данных

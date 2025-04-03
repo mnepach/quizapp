@@ -12,7 +12,7 @@ public class SoundUtils {
     private static MediaPlayer mediaPlayer;
 
     public static void playCorrectAnswerSound(Context context) {
-        if (SharedPreferencesManager.getInstance(context).isSoundEnabled()) {
+        if (SharedPreferencesManager.getInstance(context).isSoundEffectsEnabled()) {
             releaseMediaPlayer();
             mediaPlayer = MediaPlayer.create(context, R.raw.correct_answer);
             mediaPlayer.setOnCompletionListener(mp -> releaseMediaPlayer());
@@ -21,7 +21,7 @@ public class SoundUtils {
     }
 
     public static void playWrongAnswerSound(Context context) {
-        if (SharedPreferencesManager.getInstance(context).isSoundEnabled()) {
+        if (SharedPreferencesManager.getInstance(context).isSoundEffectsEnabled()) {
             releaseMediaPlayer();
             mediaPlayer = MediaPlayer.create(context, R.raw.wrong_answer);
             mediaPlayer.setOnCompletionListener(mp -> releaseMediaPlayer());
@@ -30,7 +30,7 @@ public class SoundUtils {
     }
 
     public static void playTimerTickSound(Context context) {
-        if (SharedPreferencesManager.getInstance(context).isSoundEnabled()) {
+        if (SharedPreferencesManager.getInstance(context).isSoundEffectsEnabled()) {
             releaseMediaPlayer();
             mediaPlayer = MediaPlayer.create(context, R.raw.timer_tick);
             mediaPlayer.setOnCompletionListener(mp -> releaseMediaPlayer());

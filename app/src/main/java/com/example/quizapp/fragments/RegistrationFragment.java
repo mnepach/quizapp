@@ -146,7 +146,7 @@ public class RegistrationFragment extends Fragment {
 
         if (user != null) {
             // Авторизация успешна
-            SharedPreferencesManager.setLoggedInUserId(user.getId());
+            SharedPreferencesManager.getInstance(getContext()).setCurrentUserId(user.getId());
             Toast.makeText(getContext(), getString(R.string.login_success, username), Toast.LENGTH_SHORT).show();
 
             // Возвращаемся на главный экран
@@ -178,7 +178,7 @@ public class RegistrationFragment extends Fragment {
 
         if (userId != -1) {
             // Регистрация успешна
-            SharedPreferencesManager.setLoggedInUserId(userId);
+            SharedPreferencesManager.getInstance(getContext()).setCurrentUserId(userId);
             Toast.makeText(getContext(), R.string.register_success, Toast.LENGTH_SHORT).show();
 
             // Возвращаемся на главный экран

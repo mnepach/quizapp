@@ -26,7 +26,6 @@ public class SharedPreferencesManager {
         return instance;
     }
 
-
     // Методы для работы с volume
     public int getVolume() {
         return sharedPreferences.getInt(KEY_VOLUME, 100);
@@ -79,6 +78,4 @@ public class SharedPreferencesManager {
     public void logout() {
         setCurrentUserId(-1);
     }
-
-
 }
