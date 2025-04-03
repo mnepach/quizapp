@@ -62,8 +62,14 @@ public class QuizHistoryAdapter extends ArrayAdapter<QuizAttempt> {
         String scoreText = attempt.getCorrectAnswers() + "/" + attempt.getTotalQuestions() + " (" + percentage + "%)";
         tvQuizScore.setText(scoreText);
 
-        // Вычисляем затраченное время (assuming we use attemptDate as the start time)
-        long timeSpent = 0;
+        // Вычисляем затраченное время используя метод getTimeSpent() из QuizAttempt
+        long timeSpent = attempt.getTimeSpent();
+        if (timeSpent == 0 && attempt.getEndTime() != null && attempt.getStartTime() != null) {
+            // Вычисляем время вручную, если метод вернул 0, но есть данные о начале и конце
+            timeSpent = attempt.getEndTime().getTime() - attempt.getStartTime().getTime();
+        }
+
+        // Преобразуем миллисекунды в минуты и секунды
         long minutes = timeSpent / (60 * 1000);
         long seconds = (timeSpent % (60 * 1000)) / 1000;
         String timeText = minutes + " min " + seconds + " sec";

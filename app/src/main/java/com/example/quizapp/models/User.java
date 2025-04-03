@@ -9,12 +9,6 @@ public class User {
     public User() {
     }
 
-    public User(String username, String password) {
-        this.username = username;
-        this.password = password;
-        this.totalPoints = 0;
-    }
-
     public User(long id, String username, String password, int totalPoints) {
         this.id = id;
         this.username = username;
