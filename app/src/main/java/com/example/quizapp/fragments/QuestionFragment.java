@@ -1,9 +1,7 @@
 package com.example.quizapp.fragments;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Vibrator;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,7 +25,6 @@ import com.example.quizapp.utils.AnimationUtils;
 import com.example.quizapp.utils.SharedPreferencesManager;
 import com.example.quizapp.utils.SoundUtils;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -118,6 +115,7 @@ public class QuestionFragment extends Fragment {
                 currentAttempt.setUserId(userId);
                 currentAttempt.setQuizId(quizId);
                 currentAttempt.setAttemptDate(new Date());
+                currentAttempt.setStartTime(new Date()); // Set the start time
                 quizStartTime = System.currentTimeMillis();
             }
 
@@ -137,7 +135,8 @@ public class QuestionFragment extends Fragment {
         Question currentQuestion = questions.get(index);
 
         // Обновляем заголовок
-        tvQuestionNumber.setText(getString(R.string.question_number, index + 1, questions.size()));
+        String questionNumberText = "Question " + (index + 1) + " of " + questions.size(); // Using string instead of resource
+        tvQuestionNumber.setText(questionNumberText);
 
         // Устанавливаем текст вопроса
         tvQuestion.setText(currentQuestion.getQuestionText());
@@ -337,6 +336,9 @@ public class QuestionFragment extends Fragment {
     private void finishQuiz() {
         // Сохраняем результаты прохождения викторины, если пользователь авторизован
         if (currentAttempt != null) {
+            // Set the end time
+            currentAttempt.setEndTime(new Date());
+
             // Заполняем данные о попытке
             currentAttempt.setTotalQuestions(questions.size());
 

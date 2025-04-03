@@ -11,11 +11,14 @@ public class QuizAttempt {
     private int correctAnswers;
     private int hintsUsed;
     private Date attemptDate;
+    private Date startTime; // Added field for tracking start time
+    private Date endTime;   // Added field for tracking end time
     private String quizTitle;
     private int difficulty;
 
     public QuizAttempt() {
         attemptDate = new Date();
+        startTime = new Date(); // Initialize start time on creation
     }
 
     public QuizAttempt(long userId, long quizId, String quizTitle, int difficulty) {
@@ -27,6 +30,7 @@ public class QuizAttempt {
         this.correctAnswers = 0;
         this.hintsUsed = 0;
         this.attemptDate = new Date();
+        this.startTime = new Date(); // Initialize start time on creation
     }
 
     public long getId() {
@@ -103,6 +107,23 @@ public class QuizAttempt {
 
     public void setAttemptDate(Date attemptDate) {
         this.attemptDate = attemptDate;
+    }
+
+    // Added methods for start and end time
+    public Date getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(Date startTime) {
+        this.startTime = startTime;
+    }
+
+    public Date getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(Date endTime) {
+        this.endTime = endTime;
     }
 
     public String getQuizTitle() {

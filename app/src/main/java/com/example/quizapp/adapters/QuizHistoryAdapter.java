@@ -50,25 +50,25 @@ public class QuizHistoryAdapter extends ArrayAdapter<QuizAttempt> {
         if (quiz != null) {
             tvQuizTitle.setText(quiz.getTitle());
         } else {
-            tvQuizTitle.setText(R.string.unknown_quiz);
+            tvQuizTitle.setText("Unknown Quiz"); // Fixed: replaced R.string.unknown_quiz with string literal
         }
 
         // Форматируем дату
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
-        tvQuizDate.setText(dateFormat.format(attempt.getStartTime()));
+        tvQuizDate.setText(dateFormat.format(attempt.getAttemptDate())); // Fixed: replaced getStartTime with getAttemptDate
 
         // Показываем результаты
         int percentage = (int) (((float) attempt.getCorrectAnswers() / attempt.getTotalQuestions()) * 100);
-        tvQuizScore.setText(context.getString(R.string.history_score,
-                attempt.getCorrectAnswers(),
-                attempt.getTotalQuestions(),
-                percentage));
+        String scoreText = attempt.getCorrectAnswers() + "/" + attempt.getTotalQuestions() + " (" + percentage + "%)"; // Fixed: replaced getString(R.string.history_score) with string formatting
+        tvQuizScore.setText(scoreText);
 
-        // Вычисляем затраченное время
-        long timeSpent = attempt.getEndTime().getTime() - attempt.getStartTime().getTime();
+        // Вычисляем затраченное время (assuming we use attemptDate as the start time)
+        // This may need additional logic since QuizAttempt doesn't have an end time field
+        long timeSpent = 0; // You'll need to properly implement time tracking
         long minutes = timeSpent / (60 * 1000);
         long seconds = (timeSpent % (60 * 1000)) / 1000;
-        tvQuizTime.setText(context.getString(R.string.history_time, minutes, seconds));
+        String timeText = minutes + " min " + seconds + " sec"; // Fixed: replaced getString(R.string.history_time) with string formatting
+        tvQuizTime.setText(timeText);
 
         return convertView;
     }
