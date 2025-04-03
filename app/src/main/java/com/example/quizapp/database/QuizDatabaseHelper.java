@@ -428,7 +428,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 QuizContract.QuizEntry.COLUMN_DIFFICULTY + " ASC"
         );
 
-        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
+        if (cursor.moveToFirst()) {
             do {
                 Quiz quiz = new Quiz();
                 quiz.setId(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry._ID)));
@@ -510,10 +510,32 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
     // Методы для работы с историей прохождения викторин
     public long addQuizAttempt(QuizAttempt attempt) {
         SQLiteDatabase db = this.getWritableDatabase();
+
+        // Проверка на существование попытки
+        Cursor cursor = db.query(
+                QuizContract.QuizAttemptEntry.TABLE_NAME,
+                new String[]{QuizContract.QuizAttemptEntry._ID},
+                QuizContract.QuizAttemptEntry.COLUMN_USER_ID + " = ? AND " +
+                        QuizContract.QuizAttemptEntry.COLUMN_QUIZ_ID + " = ? AND " +
+                        QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE + " = ?",
+                new String[]{
+                        String.valueOf(attempt.getUserId()),
+                        String.valueOf(attempt.getQuizId()),
+                        new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(attempt.getAttemptDate())
+                },
+                null, null, null
+        );
+
+        if (cursor.getCount() > 0) {
+            cursor.close();
+            android.util.Log.d("QuizDatabaseHelper", "Attempt already exists for userId: " + attempt.getUserId() + ", quizId: " + attempt.getQuizId());
+            return -1; // Попытка уже существует
+        }
+        cursor.close();
+
         ContentValues cv = new ContentValues();
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_USER_ID, attempt.getUserId());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_QUIZ_ID, attempt.getQuizId());
-        // Проверяем quizTitle на null и заменяем на значение по умолчанию
         String quizTitle = attempt.getQuizTitle();
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_QUIZ_TITLE, quizTitle != null ? quizTitle : "Unknown Quiz");
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_SCORE, attempt.getScore());
@@ -524,10 +546,6 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE, sdf.format(attempt.getAttemptDate()));
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_DIFFICULTY, attempt.getDifficulty());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_TIME_SPENT, attempt.getTimeSpent());
-
-        android.util.Log.d("QuizDatabaseHelper", "Attempt to insert: userId=" + attempt.getUserId() +
-                ", quizId=" + attempt.getQuizId() + ", quizTitle=" + attempt.getQuizTitle() +
-                ", score=" + attempt.getScore());
 
         long id = db.insert(QuizContract.QuizAttemptEntry.TABLE_NAME, null, cv);
         if (id != -1) {

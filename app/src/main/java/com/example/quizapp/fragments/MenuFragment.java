@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +20,9 @@ import com.example.quizapp.utils.AnimationUtils;
 import com.example.quizapp.utils.SharedPreferencesManager;
 
 public class MenuFragment extends Fragment {
+
+    private static final long INVALID_USER_ID = -1;
+    private static final String TOAST_MESSAGE_NOT_AUTHORIZED = "Пожалуйста, авторизуйтесь, чтобы просмотреть историю";
 
     private TextView tvWelcome;
     private Button btnStartQuiz;
@@ -41,7 +45,7 @@ public class MenuFragment extends Fragment {
         btnLogin = view.findViewById(R.id.btn_login);
         tvPoints = view.findViewById(R.id.tv_points);
 
-        // Проверяем, авторизован ли пользователь
+        // Проверяем, авторизован ли пользователь, и обновляем UI
         updateUI();
 
         // Настраиваем обработчики нажатий
@@ -58,10 +62,10 @@ public class MenuFragment extends Fragment {
     }
 
     private void updateUI() {
-        // Проверяем, авторизован ли пользователь
         SharedPreferencesManager prefsManager = SharedPreferencesManager.getInstance(getContext());
         long userId = prefsManager.getCurrentUserId();
-        if (userId != -1) {
+
+        if (userId != INVALID_USER_ID) {
             // Пользователь авторизован
             User user = QuizDatabaseHelper.getInstance(getContext()).getUser(userId);
             if (user != null) {
@@ -69,28 +73,43 @@ public class MenuFragment extends Fragment {
                 tvPoints.setText(getString(R.string.total_points, user.getTotalPoints()));
                 tvPoints.setVisibility(View.VISIBLE);
                 btnLogin.setText(R.string.logout);
-                btnViewHistory.setEnabled(true);
+            } else {
+                // Пользователь не найден в базе данных, сбрасываем авторизацию
+                prefsManager.logout();
+                setGuestUI();
             }
         } else {
             // Пользователь не авторизован
-            tvWelcome.setText(R.string.welcome_guest);
-            tvPoints.setVisibility(View.GONE);
-            btnLogin.setText(R.string.login_register);
-            btnViewHistory.setEnabled(false);
+            setGuestUI();
         }
+    }
+
+    private void setGuestUI() {
+        tvWelcome.setText(R.string.welcome_guest);
+        tvPoints.setVisibility(View.GONE);
+        btnLogin.setText(R.string.login_register);
     }
 
     private void setupClickListeners() {
         // Кнопка "Начать викторину"
         btnStartQuiz.setOnClickListener(v -> {
-            AnimationUtils.buttonClick(v); // Анимация нажатия
+            AnimationUtils.buttonClick(v);
             ((MainActivity) requireActivity()).loadFragment(new QuizSelectionFragment(), true);
         });
 
         // Кнопка "История"
         btnViewHistory.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
-            ((MainActivity) requireActivity()).loadFragment(new HistoryFragment(), true);
+            SharedPreferencesManager prefsManager = SharedPreferencesManager.getInstance(getContext());
+            long userId = prefsManager.getCurrentUserId();
+
+            if (userId == INVALID_USER_ID) {
+                // Пользователь не авторизован, показываем уведомление
+                Toast.makeText(getContext(), TOAST_MESSAGE_NOT_AUTHORIZED, Toast.LENGTH_SHORT).show();
+            } else {
+                // Пользователь авторизован, переходим в HistoryFragment
+                ((MainActivity) requireActivity()).loadFragment(new HistoryFragment(), true);
+            }
         });
 
         // Кнопка "Настройки"
@@ -103,7 +122,7 @@ public class MenuFragment extends Fragment {
         btnLogin.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
             SharedPreferencesManager prefsManager = SharedPreferencesManager.getInstance(getContext());
-            if (prefsManager.getCurrentUserId() != -1) {
+            if (prefsManager.getCurrentUserId() != INVALID_USER_ID) {
                 // Пользователь авторизован - выполняем выход
                 prefsManager.logout();
                 updateUI();

@@ -1,5 +1,6 @@
 package com.example.quizapp.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.view.LayoutInflater;
@@ -11,6 +12,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.cardview.widget.CardView;
@@ -23,17 +26,18 @@ import com.example.quizapp.models.Question;
 import com.example.quizapp.models.Quiz;
 import com.example.quizapp.models.QuizAttempt;
 import com.example.quizapp.utils.AnimationUtils;
-import com.example.quizapp.utils.SharedPreferencesManager;
 import com.example.quizapp.utils.SoundUtils;
+import com.example.quizapp.utils.SharedPreferencesManager;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 public class QuestionFragment extends Fragment {
 
-    private static final long MAX_QUIZ_DURATION_MS = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
-    private static final long DELAY_BEFORE_NEXT_QUESTION_MS = 1500; // Задержка перед переходом к следующему вопросу
+    private static final long MAX_QUIZ_DURATION_MS = 24 * 60 * 60 * 1000;
+    private static final long DELAY_BEFORE_NEXT_QUESTION_MS = 1500;
 
     private TextView tvQuestionNumber;
     private TextView tvQuestion;
@@ -46,7 +50,8 @@ public class QuestionFragment extends Fragment {
     private ImageView ivHint;
     private TextView tvHint;
     private CardView cardHint;
-    private Button btnUseHint;
+    private Button btnUseHint; // 50/50
+    private Button btnShareFriend; // Отправить другу
 
     private Quiz currentQuiz;
     private List<Question> questions;
@@ -57,11 +62,34 @@ public class QuestionFragment extends Fragment {
     private CountDownTimer timer;
     private boolean questionAnswered = false;
     private long quizStartTime;
+    private boolean hint50Used = false;
+    private boolean shareFriendUsed = false;
+
+    private ActivityResultLauncher<Intent> shareFriendLauncher;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        quizStartTime = System.currentTimeMillis(); // Инициализируем время начала викторины
+        quizStartTime = System.currentTimeMillis();
+
+        shareFriendLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == android.app.Activity.RESULT_CANCELED) {
+                        // Если шторка закрыта без выбора приложения
+                        btnShareFriend.setVisibility(View.VISIBLE); // Восстанавливаем кнопку
+                        shareFriendUsed = false; // Сбрасываем флаг
+                        Toast.makeText(getContext(), "Отправка отменена", Toast.LENGTH_SHORT).show();
+                    } else {
+                        // Если было выбрано приложение, оставляем кнопку скрытой
+                        shareFriendUsed = true;
+                        if (currentAttempt != null) {
+                            currentAttempt.incrementHintsUsed();
+                        }
+                        Toast.makeText(getContext(), "Вопрос отправлен другу!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     @Nullable
@@ -70,7 +98,6 @@ public class QuestionFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_question, container, false);
 
-        // Инициализация UI элементов
         tvQuestionNumber = view.findViewById(R.id.tv_question_number);
         tvQuestion = view.findViewById(R.id.tv_question);
         btnOption1 = view.findViewById(R.id.btn_option_1);
@@ -83,17 +110,21 @@ public class QuestionFragment extends Fragment {
         tvHint = view.findViewById(R.id.tv_hint);
         cardHint = view.findViewById(R.id.card_hint);
         btnUseHint = view.findViewById(R.id.btn_use_hint);
+        btnShareFriend = view.findViewById(R.id.btn_audience_help);
 
-        // Получаем ID викторины из аргументов
         if (getArguments() != null) {
             long quizId = getArguments().getLong("quiz_id");
             loadQuiz(quizId);
         }
 
-        // Настройка кнопки подсказки
         btnUseHint.setOnClickListener(v -> {
             AnimationUtils.buttonClick(v);
-            showHint();
+            useFiftyFifty();
+        });
+
+        btnShareFriend.setOnClickListener(v -> {
+            AnimationUtils.buttonClick(v);
+            shareWithFriend();
         });
 
         return view;
@@ -112,13 +143,9 @@ public class QuestionFragment extends Fragment {
         currentQuiz = dbHelper.getQuiz(quizId);
 
         if (currentQuiz != null) {
-            // Получаем вопросы для викторины
             questions = dbHelper.getQuestionsForQuiz(quizId);
-
-            // Перемешиваем вопросы для случайного порядка
             Collections.shuffle(questions);
 
-            // Создаем новую попытку прохождения викторины, если пользователь авторизован
             long userId = SharedPreferencesManager.getInstance(getContext()).getCurrentUserId();
             if (userId != -1) {
                 currentAttempt = new QuizAttempt();
@@ -130,7 +157,9 @@ public class QuestionFragment extends Fragment {
                 currentAttempt.setStartTime(new Date(quizStartTime));
             }
 
-            // Показываем первый вопрос
+            hint50Used = false;
+            shareFriendUsed = false;
+
             showQuestion(0);
         } else {
             Toast.makeText(getContext(), "Не удалось загрузить викторину", Toast.LENGTH_SHORT).show();
@@ -139,61 +168,43 @@ public class QuestionFragment extends Fragment {
     }
 
     private void showQuestion(int index) {
-        // Сбрасываем состояние
         questionAnswered = false;
         if (timer != null) {
             timer.cancel();
         }
 
-        // Получаем текущий вопрос
         Question currentQuestion = questions.get(index);
-
-        // Обновляем заголовок
         String questionNumberText = "Question " + (index + 1) + " of " + questions.size();
         tvQuestionNumber.setText(questionNumberText);
-
-        // Устанавливаем текст вопроса
         tvQuestion.setText(currentQuestion.getQuestionText());
 
-        // Получаем варианты ответов
         String[] options = currentQuestion.getOptions();
-
-        // Устанавливаем варианты ответов на кнопки
         btnOption1.setText(options[0]);
         btnOption2.setText(options[1]);
         btnOption3.setText(options[2]);
         btnOption4.setText(options[3]);
 
-        // Сбрасываем стили кнопок
         resetButtonStyles();
-
-        // Настраиваем обработчики нажатий
         setupButtonClickListeners(currentQuestion);
-
-        // Скрываем подсказку
         cardHint.setVisibility(View.GONE);
-        btnUseHint.setVisibility(View.VISIBLE);
 
-        // Запускаем таймер
+        btnUseHint.setVisibility(hint50Used ? View.GONE : View.VISIBLE);
+        btnShareFriend.setVisibility(shareFriendUsed ? View.GONE : View.VISIBLE);
+
         startTimer(currentQuiz.getTimePerQuestionInSeconds());
     }
 
     private void setupButtonClickListeners(Question question) {
         View.OnClickListener optionClickListener = v -> {
-            // Игнорируем нажатия, если уже ответили на вопрос
             if (questionAnswered) {
                 return;
             }
 
-            // Останавливаем таймер
             if (timer != null) {
                 timer.cancel();
             }
 
-            // Отмечаем, что ответ дан
             questionAnswered = true;
-
-            // Получаем текст выбранного варианта
             Button clickedButton = (Button) v;
             int selectedOptionIndex = -1;
 
@@ -202,14 +213,10 @@ public class QuestionFragment extends Fragment {
             else if (clickedButton == btnOption3) selectedOptionIndex = 2;
             else if (clickedButton == btnOption4) selectedOptionIndex = 3;
 
-            // Проверяем правильность ответа
             boolean isCorrect = question.isCorrectAnswer(selectedOptionIndex);
 
             if (isCorrect) {
-                // Правильный ответ
                 correctAnswers++;
-
-                // Добавляем очки в зависимости от сложности
                 int points = calculatePoints(question.getDifficulty());
                 totalPoints += points;
 
@@ -218,66 +225,29 @@ public class QuestionFragment extends Fragment {
                     currentAttempt.addToScore(points);
                 }
 
-                // Анимация и звук для правильного ответа
                 clickedButton.setBackgroundResource(R.drawable.button_correct);
                 SoundUtils.playCorrectAnswerSound(getContext());
             } else {
-                // Неправильный ответ
                 clickedButton.setBackgroundResource(R.drawable.button_incorrect);
-
-                // Показываем правильный ответ
                 highlightCorrectAnswer(question);
-
-                // Вибрация и звук для неправильного ответа
                 SoundUtils.vibrate(getContext(), 300);
                 SoundUtils.playWrongAnswerSound(getContext());
             }
 
-            // Задержка перед переходом к следующему вопросу
             new android.os.Handler().postDelayed(() -> {
                 if (currentQuestionIndex < questions.size() - 1) {
-                    // Переходим к следующему вопросу
                     currentQuestionIndex++;
                     showQuestion(currentQuestionIndex);
                 } else {
-                    // Завершаем викторину
                     finishQuiz();
                 }
             }, DELAY_BEFORE_NEXT_QUESTION_MS);
         };
 
-        // Назначаем обработчик для всех кнопок
         btnOption1.setOnClickListener(optionClickListener);
         btnOption2.setOnClickListener(optionClickListener);
         btnOption3.setOnClickListener(optionClickListener);
         btnOption4.setOnClickListener(optionClickListener);
-    }
-
-    private void resetButtonStyles() {
-        btnOption1.setBackgroundResource(R.drawable.button_option);
-        btnOption2.setBackgroundResource(R.drawable.button_option);
-        btnOption3.setBackgroundResource(R.drawable.button_option);
-        btnOption4.setBackgroundResource(R.drawable.button_option);
-    }
-
-    private void highlightCorrectAnswer(Question question) {
-        int correctIndex = question.getCorrectOptionIndex();
-        getButtonByIndex(correctIndex).setBackgroundResource(R.drawable.button_correct);
-    }
-
-    private Button getButtonByIndex(int index) {
-        switch (index) {
-            case 0:
-                return btnOption1;
-            case 1:
-                return btnOption2;
-            case 2:
-                return btnOption3;
-            case 3:
-                return btnOption4;
-            default:
-                throw new IllegalArgumentException("Invalid option index: " + index);
-        }
     }
 
     private void startTimer(int seconds) {
@@ -290,8 +260,6 @@ public class QuestionFragment extends Fragment {
             public void onTick(long millisUntilFinished) {
                 progressTimer.setProgress((int) millisUntilFinished);
                 tvTimer.setText(String.valueOf(millisUntilFinished / 1000));
-
-                // Играем звук тиканья часов на последних 5 секундах
                 if (millisUntilFinished <= 5000 && millisUntilFinished > 4900) {
                     SoundUtils.playTimerTickSound(getContext());
                 }
@@ -300,24 +268,16 @@ public class QuestionFragment extends Fragment {
             @Override
             public void onFinish() {
                 if (!questionAnswered) {
-                    questionAnswered = true; // Отмечаем, что вопрос обработан
+                    questionAnswered = true;
                     progressTimer.setProgress(0);
                     tvTimer.setText("0");
 
-                    // Уведомление о том, что время истекло
                     Toast.makeText(getContext(), "Время истекло! Выбран неправильный ответ.", Toast.LENGTH_SHORT).show();
-
-                    // Получаем текущий вопрос
                     Question currentQuestion = questions.get(currentQuestionIndex);
-
-                    // Показываем правильный ответ
                     highlightCorrectAnswer(currentQuestion);
-
-                    // Вибрация и звук для неправильного ответа
                     SoundUtils.vibrate(getContext(), 300);
                     SoundUtils.playWrongAnswerSound(getContext());
 
-                    // Задержка перед переходом к следующему вопросу
                     new android.os.Handler().postDelayed(() -> {
                         if (currentQuestionIndex < questions.size() - 1) {
                             currentQuestionIndex++;
@@ -331,59 +291,115 @@ public class QuestionFragment extends Fragment {
         }.start();
     }
 
-    private void showHint() {
+    private void useFiftyFifty() {
+        if (hint50Used) {
+            Toast.makeText(getContext(), "Подсказка 50/50 уже использована в этой викторине", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        hint50Used = true;
+        btnUseHint.setVisibility(View.GONE);
+        if (currentAttempt != null) {
+            currentAttempt.incrementHintsUsed();
+        }
+
         Question currentQuestion = questions.get(currentQuestionIndex);
-        String hint = currentQuestion.getHint();
-
-        if (hint != null && !hint.isEmpty()) {
-            // Показываем подсказку
-            tvHint.setText(hint);
-            cardHint.setVisibility(View.VISIBLE);
-            btnUseHint.setVisibility(View.GONE);
-
-            // Увеличиваем счетчик использованных подсказок
-            if (currentAttempt != null) {
-                currentAttempt.incrementHintsUsed();
+        int correctIndex = currentQuestion.getCorrectOptionIndex();
+        List<Integer> incorrectIndices = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            if (i != correctIndex) {
+                incorrectIndices.add(i);
             }
+        }
 
-            // Анимация для появления подсказки
-            AnimationUtils.fadeIn(cardHint);
-        } else {
-            Toast.makeText(getContext(), "Подсказка недоступна", Toast.LENGTH_SHORT).show();
+        Collections.shuffle(incorrectIndices);
+        for (int i = 0; i < 2; i++) {
+            Button button = getButtonByIndex(incorrectIndices.get(i));
+            button.setEnabled(false);
+            button.setAlpha(0.3f);
+        }
+    }
+
+    private void shareWithFriend() {
+        if (shareFriendUsed) {
+            Toast.makeText(getContext(), "Подсказка 'Отправить другу' уже использована в этой викторине", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Question currentQuestion = questions.get(currentQuestionIndex);
+        String questionText = currentQuestion.getQuestionText();
+        String[] options = currentQuestion.getOptions();
+        String shareText = "Помоги мне с вопросом из викторины!\n\n" +
+                "Вопрос: " + questionText + "\n" +
+                "Варианты:\n" +
+                "1. " + options[0] + "\n" +
+                "2. " + options[1] + "\n" +
+                "3. " + options[2] + "\n" +
+                "4. " + options[3];
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Вопрос из викторины");
+
+        // Скрываем кнопку перед запуском шторки, предполагая, что выбор будет сделан
+        btnShareFriend.setVisibility(View.GONE);
+        shareFriendLauncher.launch(Intent.createChooser(shareIntent, "Отправить другу через..."));
+    }
+
+    private void resetButtonStyles() {
+        btnOption1.setBackgroundResource(R.drawable.button_option);
+        btnOption2.setBackgroundResource(R.drawable.button_option);
+        btnOption3.setBackgroundResource(R.drawable.button_option);
+        btnOption4.setBackgroundResource(R.drawable.button_option);
+        btnOption1.setEnabled(true);
+        btnOption2.setEnabled(true);
+        btnOption3.setEnabled(true);
+        btnOption4.setEnabled(true);
+        btnOption1.setAlpha(1.0f);
+        btnOption2.setAlpha(1.0f);
+        btnOption3.setAlpha(1.0f);
+        btnOption4.setAlpha(1.0f);
+    }
+
+    private void highlightCorrectAnswer(Question question) {
+        int correctIndex = question.getCorrectOptionIndex();
+        getButtonByIndex(correctIndex).setBackgroundResource(R.drawable.button_correct);
+    }
+
+    private Button getButtonByIndex(int index) {
+        switch (index) {
+            case 0: return btnOption1;
+            case 1: return btnOption2;
+            case 2: return btnOption3;
+            case 3: return btnOption4;
+            default: throw new IllegalArgumentException("Invalid option index: " + index);
         }
     }
 
     private int calculatePoints(int difficulty) {
-        // Базовые очки за правильный ответ
         int basePoints = 10;
-        // Умножаем на коэффициент сложности
         return basePoints * difficulty;
     }
 
     private void finishQuiz() {
-        // Вычисляем время прохождения с проверкой
         long timeSpent;
         if (quizStartTime <= 0 || (System.currentTimeMillis() - quizStartTime) > MAX_QUIZ_DURATION_MS) {
-            timeSpent = 0; // Если время некорректное, сбрасываем на 0
+            timeSpent = 0;
         } else {
             timeSpent = System.currentTimeMillis() - quizStartTime;
         }
 
-        // Сохраняем результаты прохождения викторины, если пользователь авторизован
         if (currentAttempt != null) {
             currentAttempt.setEndTime(new Date());
             currentAttempt.setTotalQuestions(questions.size());
             currentAttempt.setTimeSpent(timeSpent);
 
-            // Сохраняем попытку в базу данных
             QuizDatabaseHelper.getInstance(getContext()).addQuizAttempt(currentAttempt);
-
-            // Обновляем общее количество очков пользователя
             QuizDatabaseHelper.getInstance(getContext())
                     .updateUserPoints(currentAttempt.getUserId(), currentAttempt.getScore());
         }
 
-        // Создаем фрагмент результатов и передаем ему данные
         ResultFragment resultFragment = new ResultFragment();
         Bundle args = new Bundle();
         args.putInt("correct_answers", correctAnswers);
@@ -392,7 +408,6 @@ public class QuestionFragment extends Fragment {
         args.putLong("time_spent", timeSpent);
         resultFragment.setArguments(args);
 
-        // Переходим к фрагменту результатов
         ((MainActivity) requireActivity()).loadFragment(resultFragment, true);
     }
 }
