@@ -343,7 +343,7 @@ public class QuestionFragment extends Fragment {
             currentAttempt.setTotalQuestions(questions.size());
 
             // Сохраняем попытку в базу данных
-            QuizDatabaseHelper.getInstance(getContext()).saveQuizAttempt(currentAttempt);
+            QuizDatabaseHelper.getInstance(getContext()).addQuizAttempt(currentAttempt);
 
             // Обновляем общее количество очков пользователя
             QuizDatabaseHelper.getInstance(getContext())

@@ -82,4 +82,5 @@
     <string name="welcome_user">Welcome, %1$s!</string>
     <string name="logout">Logout</string>
     <string name="login_to_view_history">Please login to view your quiz history</string>
+
 </resources>

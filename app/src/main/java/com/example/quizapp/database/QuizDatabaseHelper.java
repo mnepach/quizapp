@@ -442,7 +442,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 quiz.setTimePerQuestionInSeconds(cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry.COLUMN_TIME_PER_QUESTION)));
 
                 // Получаем вопросы для этой викторины
-                quiz.setQuestions(getQuestionsForQuiz(db, quiz.getId()));
+                quiz.setQuestions(getQuestionsForQuiz(quiz.getId()));
 
                 quizList.add(quiz);
             } while (cursor.moveToNext());
@@ -473,15 +473,17 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
             quiz.setTimePerQuestionInSeconds(cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry.COLUMN_TIME_PER_QUESTION)));
 
             // Получаем вопросы для этой викторины
-            quiz.setQuestions(getQuestionsForQuiz(db, quiz.getId()));
+            quiz.setQuestions(getQuestionsForQuiz(quiz.getId()));
 
             cursor.close();
         }
-
+        db.close();
         return quiz;
     }
 
-    private List<Question> getQuestionsForQuiz(SQLiteDatabase db, long quizId) {
+    // Изменение метода с private на public для доступа из QuestionFragment
+    public List<Question> getQuestionsForQuiz(long quizId) {
+        SQLiteDatabase db = this.getReadableDatabase();
         List<Question> questionList = new ArrayList<>();
 
         // SQL запрос для соединения таблиц и получения вопросов в нужном порядке
@@ -517,6 +519,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
             cursor.close();
         }
 
+        db.close();
         return questionList;
     }
 
@@ -629,3 +632,5 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         return questionList;
     }
 }
+
+
