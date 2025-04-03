@@ -109,7 +109,7 @@ public class QuestionFragment extends Fragment {
             Collections.shuffle(questions);
 
             // Создаем новую попытку прохождения викторины
-            long userId = SharedPreferencesManager.getInstance(getContext()).getLoggedInUserId();
+            long userId = SharedPreferencesManager.getInstance(getContext()).getCurrentUserId();
             if (userId != -1) {
                 currentAttempt = new QuizAttempt();
                 currentAttempt.setUserId(userId);
@@ -161,7 +161,7 @@ public class QuestionFragment extends Fragment {
         btnUseHint.setVisibility(View.VISIBLE);
 
         // Запускаем таймер
-        startTimer(currentQuiz.getTimePerQuestion());
+        startTimer(currentQuiz.getTimePerQuestionInSeconds());
     }
 
     private void setupButtonClickListeners(Question question) {

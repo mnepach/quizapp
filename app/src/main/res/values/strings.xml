@@ -57,7 +57,7 @@
 
     <!-- Menu Fragment -->
     <string name="welcome_guest">Welcome, Guest</string>
-    <string name="total_points">Total Points: 0</string>
+    <string name="total_points">Total Points: %d</string>
     <string name="start_quiz">Start Quiz</string>
     <string name="login_register">Login/Register</string>
 
@@ -81,4 +81,5 @@
     <!-- В существующий файл strings.xml добавьте: -->
     <string name="welcome_user">Welcome, %1$s!</string>
     <string name="logout">Logout</string>
+    <string name="login_to_view_history">Please login to view your quiz history</string>
 </resources>
