@@ -135,7 +135,7 @@ public class QuestionFragment extends Fragment {
         Question currentQuestion = questions.get(index);
 
         // Обновляем заголовок
-        String questionNumberText = "Question " + (index + 1) + " of " + questions.size(); // Using string instead of resource
+        String questionNumberText = "Question " + (index + 1) + " of " + questions.size();
         tvQuestionNumber.setText(questionNumberText);
 
         // Устанавливаем текст вопроса

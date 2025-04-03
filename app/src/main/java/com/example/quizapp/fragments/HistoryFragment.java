@@ -1,6 +1,7 @@
 package com.example.quizapp.fragments;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -26,6 +27,7 @@ public class HistoryFragment extends Fragment {
     private ListView lvHistory;
     private TextView tvNoHistory;
     private Button btnBackToMenu;
+    private QuizDatabaseHelper dbHelper;
 
     @Nullable
     @Override
@@ -38,25 +40,43 @@ public class HistoryFragment extends Fragment {
         tvNoHistory = view.findViewById(R.id.tv_no_history);
         btnBackToMenu = view.findViewById(R.id.btn_back_to_menu);
 
+        // Инициализация базы данных
+        dbHelper = QuizDatabaseHelper.getInstance(getContext());
+
         // Настройка кнопки возврата в меню
         btnBackToMenu.setOnClickListener(v -> {
             ((MainActivity) requireActivity()).loadFragment(new MenuFragment(), false);
         });
 
-        // Загрузка истории прохождений
+        // Загрузка истории при создании
         loadHistory();
 
         return view;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Обновляем историю при возвращении к фрагменту
+        loadHistory();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Закрываем базу данных при уничтожении фрагмента (опционально)
+        dbHelper.closeDatabase();
+    }
+
     private void loadHistory() {
-        // Получаем ID текущего пользователя
         long userId = SharedPreferencesManager.getInstance(getContext()).getCurrentUserId();
 
         if (userId != -1) {
             // Получаем историю прохождений из базы данных
-            List<QuizAttempt> attempts = QuizDatabaseHelper.getInstance(getContext())
-                    .getQuizAttemptsForUser(userId);
+            List<QuizAttempt> attempts = dbHelper.getQuizAttemptsForUser(userId);
+
+            // Логируем количество попыток для диагностики
+            Log.d("HistoryFragment", "Loaded " + attempts.size() + " attempts for userId: " + userId);
 
             if (attempts != null && !attempts.isEmpty()) {
                 // Показываем историю
@@ -66,6 +86,7 @@ public class HistoryFragment extends Fragment {
                 lvHistory.setVisibility(View.VISIBLE);
             } else {
                 // Нет истории
+                tvNoHistory.setText(R.string.no_history_available);
                 tvNoHistory.setVisibility(View.VISIBLE);
                 lvHistory.setVisibility(View.GONE);
             }
@@ -74,6 +95,7 @@ public class HistoryFragment extends Fragment {
             tvNoHistory.setText(R.string.login_to_view_history);
             tvNoHistory.setVisibility(View.VISIBLE);
             lvHistory.setVisibility(View.GONE);
+            Log.w("HistoryFragment", "User not logged in, userId: " + userId);
         }
     }
 }

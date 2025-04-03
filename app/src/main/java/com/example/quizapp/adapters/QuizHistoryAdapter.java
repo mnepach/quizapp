@@ -50,24 +50,23 @@ public class QuizHistoryAdapter extends ArrayAdapter<QuizAttempt> {
         if (quiz != null) {
             tvQuizTitle.setText(quiz.getTitle());
         } else {
-            tvQuizTitle.setText("Unknown Quiz"); // Fixed: replaced R.string.unknown_quiz with string literal
+            tvQuizTitle.setText("Unknown Quiz");
         }
 
         // Форматируем дату
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault());
-        tvQuizDate.setText(dateFormat.format(attempt.getAttemptDate())); // Fixed: replaced getStartTime with getAttemptDate
+        tvQuizDate.setText(dateFormat.format(attempt.getAttemptDate()));
 
         // Показываем результаты
         int percentage = (int) (((float) attempt.getCorrectAnswers() / attempt.getTotalQuestions()) * 100);
-        String scoreText = attempt.getCorrectAnswers() + "/" + attempt.getTotalQuestions() + " (" + percentage + "%)"; // Fixed: replaced getString(R.string.history_score) with string formatting
+        String scoreText = attempt.getCorrectAnswers() + "/" + attempt.getTotalQuestions() + " (" + percentage + "%)";
         tvQuizScore.setText(scoreText);
 
         // Вычисляем затраченное время (assuming we use attemptDate as the start time)
-        // This may need additional logic since QuizAttempt doesn't have an end time field
-        long timeSpent = 0; // You'll need to properly implement time tracking
+        long timeSpent = 0;
         long minutes = timeSpent / (60 * 1000);
         long seconds = (timeSpent % (60 * 1000)) / 1000;
-        String timeText = minutes + " min " + seconds + " sec"; // Fixed: replaced getString(R.string.history_time) with string formatting
+        String timeText = minutes + " min " + seconds + " sec";
         tvQuizTime.setText(timeText);
 
         return convertView;
