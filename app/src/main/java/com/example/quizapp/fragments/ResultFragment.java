@@ -15,7 +15,12 @@ import com.example.quizapp.MainActivity;
 import com.example.quizapp.R;
 import com.example.quizapp.utils.AnimationUtils;
 
+import java.util.Locale;
+
 public class ResultFragment extends Fragment {
+
+    private static final long MAX_QUIZ_DURATION_MS = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+    private static final long ANIMATION_DELAY_MS = 300; // Задержка между анимациями
 
     private TextView tvResultTitle;
     private TextView tvCorrectAnswers;
@@ -63,8 +68,13 @@ public class ResultFragment extends Fragment {
         int totalPoints = getArguments().getInt("total_points");
         long timeSpent = getArguments().getLong("time_spent");
 
+        // Проверяем корректность времени
+        if (timeSpent < 0 || timeSpent > MAX_QUIZ_DURATION_MS) {
+            timeSpent = 0; // Сбрасываем на 0, если время некорректное
+        }
+
         // Рассчитываем процент правильных ответов
-        int percentage = (int) (((float) correctAnswers / totalQuestions) * 100);
+        int percentage = totalQuestions > 0 ? (int) (((float) correctAnswers / totalQuestions) * 100) : 0;
 
         // Устанавливаем заголовок в зависимости от результата
         if (percentage >= 80) {
@@ -83,15 +93,16 @@ public class ResultFragment extends Fragment {
         // Устанавливаем информацию об очках
         tvScore.setText(getString(R.string.total_score, totalPoints));
 
-        // Устанавливаем информацию о затраченном времени
+        // Форматируем время в минуты и секунды
         long minutes = timeSpent / (60 * 1000);
         long seconds = (timeSpent % (60 * 1000)) / 1000;
-        tvTimeSpent.setText(getString(R.string.time_spent, minutes, seconds));
+        String timeText = String.format(Locale.getDefault(), "%d мин %d сек", minutes, seconds);
+        tvTimeSpent.setText(timeText);
 
         // Анимируем появление текста
         AnimationUtils.fadeIn(tvResultTitle);
-        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvCorrectAnswers), 300);
-        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvScore), 600);
-        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvTimeSpent), 900);
+        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvCorrectAnswers), ANIMATION_DELAY_MS);
+        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvScore), ANIMATION_DELAY_MS * 2);
+        new android.os.Handler().postDelayed(() -> AnimationUtils.fadeIn(tvTimeSpent), ANIMATION_DELAY_MS * 3);
     }
 }

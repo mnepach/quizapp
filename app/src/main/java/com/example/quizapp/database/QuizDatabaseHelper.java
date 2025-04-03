@@ -20,7 +20,7 @@ import java.util.Locale;
 public class QuizDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "QuizApp.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     private static QuizDatabaseHelper instance;
 
@@ -98,6 +98,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 QuizContract.QuizAttemptEntry.COLUMN_HINTS_USED + " INTEGER NOT NULL, " +
                 QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE + " TEXT NOT NULL, " +
                 QuizContract.QuizAttemptEntry.COLUMN_DIFFICULTY + " INTEGER NOT NULL, " +
+                QuizContract.QuizAttemptEntry.COLUMN_TIME_SPENT + " INTEGER NOT NULL, " +
                 "FOREIGN KEY(" + QuizContract.QuizAttemptEntry.COLUMN_USER_ID + ") REFERENCES " +
                 QuizContract.UserEntry.TABLE_NAME + "(" + QuizContract.UserEntry._ID + "), " +
                 "FOREIGN KEY(" + QuizContract.QuizAttemptEntry.COLUMN_QUIZ_ID + ") REFERENCES " +
@@ -278,7 +279,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
     // Метод для закрытия базы данных
     public void closeDatabase() {
         SQLiteDatabase db = this.getWritableDatabase();
-        if (db != null && db.isOpen()) {
+        if (db.isOpen()) {
             db.close();
         }
     }
@@ -290,14 +291,11 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         cv.put(QuizContract.UserEntry.COLUMN_USERNAME, user.getUsername());
         cv.put(QuizContract.UserEntry.COLUMN_PASSWORD, user.getPassword());
         cv.put(QuizContract.UserEntry.COLUMN_TOTAL_POINTS, user.getTotalPoints());
-        long id = db.insert(QuizContract.UserEntry.TABLE_NAME, null, cv);
-        // db.close() убрано
-        return id;
+        return db.insert(QuizContract.UserEntry.TABLE_NAME, null, cv); // Убрана лишняя переменная id
     }
 
     public User getUser(long userId) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.UserEntry.TABLE_NAME,
                 new String[]{
@@ -312,22 +310,21 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         );
 
         User user = null;
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             user = new User(
                     cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.UserEntry._ID)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_USERNAME)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_PASSWORD)),
                     cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_TOTAL_POINTS))
             );
-            cursor.close();
         }
-        // db.close() убрано
+        cursor.close();
         return user;
     }
 
+    // Оставлен для возможного использования в будущем
     public User getUserByUsername(String username) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.UserEntry.TABLE_NAME,
                 new String[]{
@@ -342,22 +339,20 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         );
 
         User user = null;
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             user = new User(
                     cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.UserEntry._ID)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_USERNAME)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_PASSWORD)),
                     cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_TOTAL_POINTS))
             );
-            cursor.close();
         }
-        // db.close() убрано
+        cursor.close();
         return user;
     }
 
     public User getUserByCredentials(String username, String password) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.UserEntry.TABLE_NAME,
                 new String[]{
@@ -373,22 +368,20 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         );
 
         User user = null;
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             user = new User(
                     cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.UserEntry._ID)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_USERNAME)),
                     cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_PASSWORD)),
                     cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.UserEntry.COLUMN_TOTAL_POINTS))
             );
-            cursor.close();
         }
-        // db.close() убрано
+        cursor.close();
         return user;
     }
 
     public boolean usernameExists(String username) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.UserEntry.TABLE_NAME,
                 new String[]{QuizContract.UserEntry._ID},
@@ -397,16 +390,13 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 null, null, null
         );
 
-        boolean exists = cursor != null && cursor.getCount() > 0;
-        if (cursor != null) {
-            cursor.close();
-        }
-        // db.close() убрано
+        boolean exists = cursor.getCount() > 0; // Убрана проверка cursor != null
+        cursor.close();
         return exists;
     }
 
     public long saveUser(User user) {
-        return addUser(user);
+        return addUser(user); // Возвращаем ID пользователя
     }
 
     public void updateUserPoints(long userId, int points) {
@@ -422,14 +412,12 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                     new String[]{String.valueOf(userId)}
             );
         }
-        // db.close() убрано
     }
 
     // Методы для работы с викторинами
     public List<Quiz> getAllQuizzes() {
         List<Quiz> quizList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.QuizEntry.TABLE_NAME,
                 null,
@@ -440,7 +428,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 QuizContract.QuizEntry.COLUMN_DIFFICULTY + " ASC"
         );
 
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             do {
                 Quiz quiz = new Quiz();
                 quiz.setId(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry._ID)));
@@ -450,19 +438,15 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
 
                 // Получаем вопросы для этой викторины
                 quiz.setQuestions(getQuestionsForQuiz(quiz.getId()));
-
                 quizList.add(quiz);
             } while (cursor.moveToNext());
-            cursor.close();
         }
-
-        // db.close() убрано
+        cursor.close();
         return quizList;
     }
 
     public Quiz getQuiz(long quizId) {
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.QuizEntry.TABLE_NAME,
                 null,
@@ -472,7 +456,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         );
 
         Quiz quiz = null;
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             quiz = new Quiz();
             quiz.setId(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry._ID)));
             quiz.setTitle(cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.QuizEntry.COLUMN_TITLE)));
@@ -481,10 +465,8 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
 
             // Получаем вопросы для этой викторины
             quiz.setQuestions(getQuestionsForQuiz(quiz.getId()));
-
-            cursor.close();
         }
-        // db.close() убрано
+        cursor.close();
         return quiz;
     }
 
@@ -492,7 +474,6 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getReadableDatabase();
         List<Question> questionList = new ArrayList<>();
 
-        // SQL запрос для соединения таблиц и получения вопросов в нужном порядке
         String query = "SELECT q.* FROM " + QuizContract.QuestionEntry.TABLE_NAME + " q " +
                 "JOIN " + QuizContract.QuizQuestionEntry.TABLE_NAME + " qq " +
                 "ON q." + QuizContract.QuestionEntry._ID + " = qq." + QuizContract.QuizQuestionEntry.COLUMN_QUESTION_ID + " " +
@@ -500,8 +481,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 "ORDER BY qq." + QuizContract.QuizQuestionEntry.COLUMN_QUESTION_ORDER + " ASC";
 
         Cursor cursor = db.rawQuery(query, new String[]{String.valueOf(quizId)});
-
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) { // Убрана проверка cursor != null
             do {
                 Question question = new Question();
                 question.setId(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuestionEntry._ID)));
@@ -522,10 +502,8 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
 
                 questionList.add(question);
             } while (cursor.moveToNext());
-            cursor.close();
         }
-
-        // db.close() убрано
+        cursor.close();
         return questionList;
     }
 
@@ -535,7 +513,9 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         ContentValues cv = new ContentValues();
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_USER_ID, attempt.getUserId());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_QUIZ_ID, attempt.getQuizId());
-        cv.put(QuizContract.QuizAttemptEntry.COLUMN_QUIZ_TITLE, attempt.getQuizTitle());
+        // Проверяем quizTitle на null и заменяем на значение по умолчанию
+        String quizTitle = attempt.getQuizTitle();
+        cv.put(QuizContract.QuizAttemptEntry.COLUMN_QUIZ_TITLE, quizTitle != null ? quizTitle : "Unknown Quiz");
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_SCORE, attempt.getScore());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_TOTAL_QUESTIONS, attempt.getTotalQuestions());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_CORRECT_ANSWERS, attempt.getCorrectAnswers());
@@ -543,13 +523,18 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE, sdf.format(attempt.getAttemptDate()));
         cv.put(QuizContract.QuizAttemptEntry.COLUMN_DIFFICULTY, attempt.getDifficulty());
+        cv.put(QuizContract.QuizAttemptEntry.COLUMN_TIME_SPENT, attempt.getTimeSpent());
+
+        android.util.Log.d("QuizDatabaseHelper", "Attempt to insert: userId=" + attempt.getUserId() +
+                ", quizId=" + attempt.getQuizId() + ", quizTitle=" + attempt.getQuizTitle() +
+                ", score=" + attempt.getScore());
 
         long id = db.insert(QuizContract.QuizAttemptEntry.TABLE_NAME, null, cv);
-        android.util.Log.d("QuizDatabaseHelper", "Inserted attempt with ID: " + id);
         if (id != -1) {
+            android.util.Log.d("QuizDatabaseHelper", "Inserted attempt with ID: " + id);
             updateUserPoints(attempt.getUserId(), attempt.getScore());
         } else {
-            android.util.Log.e("QuizDatabaseHelper", "Failed to insert attempt");
+            android.util.Log.e("QuizDatabaseHelper", "Failed to insert attempt for userId: " + attempt.getUserId());
         }
         return id;
     }
@@ -557,7 +542,6 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
     public List<QuizAttempt> getQuizAttemptsForUser(long userId) {
         List<QuizAttempt> attemptList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.QuizAttemptEntry.TABLE_NAME,
                 null,
@@ -567,7 +551,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE + " DESC"
         );
 
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
             do {
                 QuizAttempt attempt = new QuizAttempt();
@@ -580,27 +564,28 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 attempt.setCorrectAnswers(cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.QuizAttemptEntry.COLUMN_CORRECT_ANSWERS)));
                 attempt.setHintsUsed(cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.QuizAttemptEntry.COLUMN_HINTS_USED)));
                 attempt.setDifficulty(cursor.getInt(cursor.getColumnIndexOrThrow(QuizContract.QuizAttemptEntry.COLUMN_DIFFICULTY)));
+                attempt.setTimeSpent(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuizAttemptEntry.COLUMN_TIME_SPENT)));
 
                 try {
                     String dateString = cursor.getString(cursor.getColumnIndexOrThrow(QuizContract.QuizAttemptEntry.COLUMN_ATTEMPT_DATE));
                     attempt.setAttemptDate(sdf.parse(dateString));
                 } catch (Exception e) {
                     attempt.setAttemptDate(new Date());
+                    android.util.Log.e("QuizDatabaseHelper", "Failed to parse date: " + e.getMessage());
                 }
 
                 attemptList.add(attempt);
             } while (cursor.moveToNext());
-            cursor.close();
         }
-
-        // db.close() убрано
+        cursor.close();
+        android.util.Log.d("QuizDatabaseHelper", "Loaded " + attemptList.size() + " attempts for userId: " + userId);
         return attemptList;
     }
 
+    // Оставлен для возможного использования в будущем
     public List<Question> getQuestionsByDifficulty(int difficulty) {
         List<Question> questionList = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-
         Cursor cursor = db.query(
                 QuizContract.QuestionEntry.TABLE_NAME,
                 null,
@@ -609,7 +594,7 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
                 null, null, null
         );
 
-        if (cursor != null && cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
             do {
                 Question question = new Question();
                 question.setId(cursor.getLong(cursor.getColumnIndexOrThrow(QuizContract.QuestionEntry._ID)));
@@ -630,10 +615,8 @@ public class QuizDatabaseHelper extends SQLiteOpenHelper {
 
                 questionList.add(question);
             } while (cursor.moveToNext());
-            cursor.close();
         }
-
-        // db.close() убрано
+        cursor.close();
         return questionList;
     }
 }

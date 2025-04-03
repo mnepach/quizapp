@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -30,6 +31,9 @@ import java.util.Date;
 import java.util.List;
 
 public class QuestionFragment extends Fragment {
+
+    private static final long MAX_QUIZ_DURATION_MS = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+    private static final long DELAY_BEFORE_NEXT_QUESTION_MS = 1500; // Задержка перед переходом к следующему вопросу
 
     private TextView tvQuestionNumber;
     private TextView tvQuestion;
@@ -53,6 +57,12 @@ public class QuestionFragment extends Fragment {
     private CountDownTimer timer;
     private boolean questionAnswered = false;
     private long quizStartTime;
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        quizStartTime = System.currentTimeMillis(); // Инициализируем время начала викторины
+    }
 
     @Nullable
     @Override
@@ -108,19 +118,23 @@ public class QuestionFragment extends Fragment {
             // Перемешиваем вопросы для случайного порядка
             Collections.shuffle(questions);
 
-            // Создаем новую попытку прохождения викторины
+            // Создаем новую попытку прохождения викторины, если пользователь авторизован
             long userId = SharedPreferencesManager.getInstance(getContext()).getCurrentUserId();
             if (userId != -1) {
                 currentAttempt = new QuizAttempt();
                 currentAttempt.setUserId(userId);
                 currentAttempt.setQuizId(quizId);
+                currentAttempt.setQuizTitle(currentQuiz.getTitle());
+                currentAttempt.setDifficulty(currentQuiz.getDifficulty());
                 currentAttempt.setAttemptDate(new Date());
-                currentAttempt.setStartTime(new Date()); // Set the start time
-                quizStartTime = System.currentTimeMillis();
+                currentAttempt.setStartTime(new Date(quizStartTime));
             }
 
             // Показываем первый вопрос
             showQuestion(0);
+        } else {
+            Toast.makeText(getContext(), "Не удалось загрузить викторину", Toast.LENGTH_SHORT).show();
+            ((MainActivity) requireActivity()).loadFragment(new MenuFragment(), false);
         }
     }
 
@@ -229,7 +243,7 @@ public class QuestionFragment extends Fragment {
                     // Завершаем викторину
                     finishQuiz();
                 }
-            }, 1500);
+            }, DELAY_BEFORE_NEXT_QUESTION_MS);
         };
 
         // Назначаем обработчик для всех кнопок
@@ -248,23 +262,30 @@ public class QuestionFragment extends Fragment {
 
     private void highlightCorrectAnswer(Question question) {
         int correctIndex = question.getCorrectOptionIndex();
+        getButtonByIndex(correctIndex).setBackgroundResource(R.drawable.button_correct);
+    }
 
-        if (correctIndex == 0) {
-            btnOption1.setBackgroundResource(R.drawable.button_correct);
-        } else if (correctIndex == 1) {
-            btnOption2.setBackgroundResource(R.drawable.button_correct);
-        } else if (correctIndex == 2) {
-            btnOption3.setBackgroundResource(R.drawable.button_correct);
-        } else if (correctIndex == 3) {
-            btnOption4.setBackgroundResource(R.drawable.button_correct);
+    private Button getButtonByIndex(int index) {
+        switch (index) {
+            case 0:
+                return btnOption1;
+            case 1:
+                return btnOption2;
+            case 2:
+                return btnOption3;
+            case 3:
+                return btnOption4;
+            default:
+                throw new IllegalArgumentException("Invalid option index: " + index);
         }
     }
 
     private void startTimer(int seconds) {
-        progressTimer.setMax(seconds * 1000);
-        progressTimer.setProgress(seconds * 1000);
+        final int totalMillis = seconds * 1000;
+        progressTimer.setMax(totalMillis);
+        progressTimer.setProgress(totalMillis);
 
-        timer = new CountDownTimer(seconds * 1000, 100) {
+        timer = new CountDownTimer(totalMillis, 100) {
             @Override
             public void onTick(long millisUntilFinished) {
                 progressTimer.setProgress((int) millisUntilFinished);
@@ -278,16 +299,23 @@ public class QuestionFragment extends Fragment {
 
             @Override
             public void onFinish() {
-                // Время истекло, переходим к следующему вопросу
                 if (!questionAnswered) {
+                    questionAnswered = true; // Отмечаем, что вопрос обработан
                     progressTimer.setProgress(0);
                     tvTimer.setText("0");
 
-                    // Показываем правильный ответ
-                    highlightCorrectAnswer(questions.get(currentQuestionIndex));
+                    // Уведомление о том, что время истекло
+                    Toast.makeText(getContext(), "Время истекло! Выбран неправильный ответ.", Toast.LENGTH_SHORT).show();
 
-                    // Вибрация
+                    // Получаем текущий вопрос
+                    Question currentQuestion = questions.get(currentQuestionIndex);
+
+                    // Показываем правильный ответ
+                    highlightCorrectAnswer(currentQuestion);
+
+                    // Вибрация и звук для неправильного ответа
                     SoundUtils.vibrate(getContext(), 300);
+                    SoundUtils.playWrongAnswerSound(getContext());
 
                     // Задержка перед переходом к следующему вопросу
                     new android.os.Handler().postDelayed(() -> {
@@ -297,7 +325,7 @@ public class QuestionFragment extends Fragment {
                         } else {
                             finishQuiz();
                         }
-                    }, 1500);
+                    }, DELAY_BEFORE_NEXT_QUESTION_MS);
                 }
             }
         }.start();
@@ -305,8 +333,6 @@ public class QuestionFragment extends Fragment {
 
     private void showHint() {
         Question currentQuestion = questions.get(currentQuestionIndex);
-
-        // Получаем подсказку для текущего вопроса
         String hint = currentQuestion.getHint();
 
         if (hint != null && !hint.isEmpty()) {
@@ -322,25 +348,32 @@ public class QuestionFragment extends Fragment {
 
             // Анимация для появления подсказки
             AnimationUtils.fadeIn(cardHint);
+        } else {
+            Toast.makeText(getContext(), "Подсказка недоступна", Toast.LENGTH_SHORT).show();
         }
     }
 
     private int calculatePoints(int difficulty) {
         // Базовые очки за правильный ответ
         int basePoints = 10;
-
         // Умножаем на коэффициент сложности
         return basePoints * difficulty;
     }
 
     private void finishQuiz() {
+        // Вычисляем время прохождения с проверкой
+        long timeSpent;
+        if (quizStartTime <= 0 || (System.currentTimeMillis() - quizStartTime) > MAX_QUIZ_DURATION_MS) {
+            timeSpent = 0; // Если время некорректное, сбрасываем на 0
+        } else {
+            timeSpent = System.currentTimeMillis() - quizStartTime;
+        }
+
         // Сохраняем результаты прохождения викторины, если пользователь авторизован
         if (currentAttempt != null) {
-            // Set the end time
             currentAttempt.setEndTime(new Date());
-
-            // Заполняем данные о попытке
             currentAttempt.setTotalQuestions(questions.size());
+            currentAttempt.setTimeSpent(timeSpent);
 
             // Сохраняем попытку в базу данных
             QuizDatabaseHelper.getInstance(getContext()).addQuizAttempt(currentAttempt);
@@ -356,7 +389,7 @@ public class QuestionFragment extends Fragment {
         args.putInt("correct_answers", correctAnswers);
         args.putInt("total_questions", questions.size());
         args.putInt("total_points", totalPoints);
-        args.putLong("time_spent", System.currentTimeMillis() - quizStartTime);
+        args.putLong("time_spent", timeSpent);
         resultFragment.setArguments(args);
 
         // Переходим к фрагменту результатов

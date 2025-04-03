@@ -57,5 +57,6 @@ public final class QuizContract {
         public static final String COLUMN_HINTS_USED = "hints_used";
         public static final String COLUMN_ATTEMPT_DATE = "attempt_date";
         public static final String COLUMN_DIFFICULTY = "difficulty";
+        public static final String COLUMN_TIME_SPENT = "time_spent";
     }
 }

@@ -64,7 +64,7 @@ public class HistoryFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // Закрываем базу данных при уничтожении фрагмента (опционально)
+        // Закрываем базу данных при уничтожении фрагмента
         dbHelper.closeDatabase();
     }
 
@@ -78,7 +78,7 @@ public class HistoryFragment extends Fragment {
             // Логируем количество попыток для диагностики
             Log.d("HistoryFragment", "Loaded " + attempts.size() + " attempts for userId: " + userId);
 
-            if (attempts != null && !attempts.isEmpty()) {
+            if (!attempts.isEmpty()) {
                 // Показываем историю
                 QuizHistoryAdapter adapter = new QuizHistoryAdapter(getContext(), attempts);
                 lvHistory.setAdapter(adapter);

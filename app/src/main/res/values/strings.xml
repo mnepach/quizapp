@@ -82,5 +82,5 @@
     <string name="welcome_user">ЗД няшко :33, %1$s!</string>
     <string name="logout">Выйти</string>
     <string name="login_to_view_history">Пожалуйста, войдите, чтобы просмотреть историю викторин</string>
-    <string name="no_history_available">No quiz history available</string>
+    <string name="no_history_available">История отсутствует</string>
 </resources>

@@ -13,14 +13,16 @@ public class QuizAttempt {
     private int hintsUsed;
     private Date attemptDate;
     private int difficulty;
-    private Date startTime; // Добавлено для отслеживания времени начала
-    private Date endTime;   // Добавлено для отслеживания времени окончания
+    private Date startTime; // Оставляем для возможного использования
+    private Date endTime;   // Оставляем для возможного использования
+    private long timeSpent; // Новое поле для хранения времени прохождения
 
     // Конструктор по умолчанию
     public QuizAttempt() {
         this.score = 0;
         this.correctAnswers = 0;
         this.hintsUsed = 0;
+        this.timeSpent = 0; // Инициализируем timeSpent
     }
 
     // Геттеры и сеттеры
@@ -132,11 +134,12 @@ public class QuizAttempt {
         this.endTime = endTime;
     }
 
-    // Метод для вычисления времени прохождения (в миллисекундах)
+    // Геттер и сеттер для timeSpent
     public long getTimeSpent() {
-        if (startTime != null && endTime != null) {
-            return endTime.getTime() - startTime.getTime();
-        }
-        return 0;
+        return timeSpent; // Теперь возвращаем сохранённое значение
+    }
+
+    public void setTimeSpent(long timeSpent) {
+        this.timeSpent = timeSpent;
     }
 }
